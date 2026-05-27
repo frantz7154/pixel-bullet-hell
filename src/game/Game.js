@@ -4,7 +4,7 @@
  * roguelike upgrade selections, and CRT interface transitions.
  */
 import { Player } from './Player.js';
-import { Enemy, XPGem, HealthPack } from './Enemy.js';
+import { Enemy, XPGem, HealthPack, PowerUp } from './Enemy.js';
 import { ParticleFactory, camera } from './Particle.js';
 import { UpgradeSystem } from './UpgradeSystem.js';
 import audioSystem from './AudioSystem.js';
@@ -21,6 +21,7 @@ export class Game {
     this.bullets = [];
     this.xpGems = [];
     this.healthPacks = [];
+    this.powerUps = [];
     
     // State
     this.isGameOver = false;
@@ -49,9 +50,13 @@ export class Game {
       hpText: document.getElementById('hpText'),
       shieldFill: document.getElementById('shieldFill'),
       shieldText: document.getElementById('shieldText'),
+      superFill: document.getElementById('superFill'),
+      superText: document.getElementById('superText'),
       bombsRow: document.getElementById('bombsRow'),
       xpFill: document.getElementById('xpFill'),
       xpText: document.getElementById('xpText'),
+      superFill: document.getElementById('superFill'),
+      superText: document.getElementById('superText'),
       bossAlarm: document.getElementById('bossAlarm'),
       levelUpScreen: document.getElementById('levelUpScreen'),
       upgradeCards: document.getElementById('upgradeCards'),
@@ -90,6 +95,7 @@ export class Game {
     this.bullets = [];
     this.xpGems = [];
     this.healthPacks = [];
+    this.powerUps = [];
     ParticleFactory.clear();
     
     // Generate background elements once
@@ -171,9 +177,9 @@ export class Game {
     }
     
     // Standard waves: Math formulas for spawns based on stage & wave
-    const droneCount = 5 + this.stage * 3 + w * 2;
-    const spinnerCount = (this.stage > 1 || w > 1) ? (this.stage * 2 + w * 2 - 2) : 0;
-    const sniperCount = (this.stage > 2 || (this.stage === 2 && w > 1)) ? (this.stage * 2 + w - 3) : 0;
+    const droneCount = Math.floor((5 + this.stage * 3 + w * 2) * 1.6);
+    const spinnerCount = (this.stage > 1 || w > 1) ? Math.floor((this.stage * 2 + w * 2 - 2) * 1.5) : 0;
+    const sniperCount = (this.stage > 2 || (this.stage === 2 && w > 1)) ? Math.floor((this.stage * 2 + w - 3) * 1.5) : 0;
     
     // Queue up staggered spawn positions
     for (let i = 0; i < droneCount; i++) {
@@ -339,6 +345,15 @@ export class Game {
         this.healthPacks.splice(i, 1);
       }
     }
+
+    // 6b. Update cyber power-up drops
+    for (let i = this.powerUps.length - 1; i >= 0; i--) {
+      const p = this.powerUps[i];
+      p.update();
+      if (p.isDead || p.y > this.canvas.height + 50) {
+        this.powerUps.splice(i, 1);
+      }
+    }
     
     // 7. Update glowing visual particles
     ParticleFactory.update();
@@ -390,6 +405,17 @@ export class Game {
               if (Math.random() < dropChance) {
                 this.healthPacks.push(new HealthPack(e.x, e.y));
               }
+
+              // Drop Cyber Power-Up (8% chance drone, 15% spinner/sniper)
+              const pDropChance = e.type === 'drone' ? 0.08 : (e.type === 'spinner' || e.type === 'sniper' ? 0.15 : 0.0);
+              if (Math.random() < pDropChance) {
+                const types = ['P', 'B', 'H'];
+                const chosenType = types[Math.floor(Math.random() * types.length)];
+                this.powerUps.push(new PowerUp(e.x, e.y, chosenType));
+              }
+
+              // Increment Super power by 0.8
+              this.player.superPower = Math.min(100, (this.player.superPower || 0) + 0.8);
             }
             
             // Heavy nuclear splash damage routine
@@ -421,6 +447,17 @@ export class Game {
                     for (let g = 0; g < sGemCount; g++) {
                       this.xpGems.push(new XPGem(enemy.x + (Math.random() * 20 - 10), enemy.y + (Math.random() * 20 - 10), enemy.type.startsWith('boss') ? 50 : 15));
                     }
+
+                    // Drop Cyber Power-Up for splash kills (8% drone, 15% spinner/sniper)
+                    const pDropChance = enemy.type === 'drone' ? 0.08 : (enemy.type === 'spinner' || enemy.type === 'sniper' ? 0.15 : 0.0);
+                    if (Math.random() < pDropChance) {
+                      const types = ['P', 'B', 'H'];
+                      const chosenType = types[Math.floor(Math.random() * types.length)];
+                      this.powerUps.push(new PowerUp(enemy.x, enemy.y, chosenType));
+                    }
+
+                    // Increment Super power by 0.8
+                    this.player.superPower = Math.min(100, (this.player.superPower || 0) + 0.8);
                   }
                 }
               }
@@ -492,6 +529,8 @@ export class Game {
       
       if (dist < (this.player.radius + gem.radius) * (this.player.radius + gem.radius)) {
         gem.isDead = true;
+        // Increment Super power on gem pickup by 1.5
+        this.player.superPower = Math.min(100, (this.player.superPower || 0) + 1.5);
         const levelUp = this.player.gainXP(gem.amount);
         if (levelUp) {
           this.triggerLevelUp();
@@ -515,6 +554,31 @@ export class Game {
         ParticleFactory.spawnExplosion(pack.x, pack.y, '#ff2d55', 8);
       }
     }
+
+    // Power-Up items collision checking
+    for (let i = 0; i < this.powerUps.length; i++) {
+      const p = this.powerUps[i];
+      if (p.isDead) continue;
+      
+      const dx = this.player.x - p.x;
+      const dy = this.player.y - p.y;
+      const dist = dx * dx + dy * dy;
+      
+      if (dist < (this.player.radius + p.radius) * (this.player.radius + p.radius)) {
+        p.isDead = true;
+        audioSystem.playUpgrade(); // Play upgrade chime
+        ParticleFactory.spawnExplosion(p.x, p.y, p.color, 8);
+        
+        if (p.type === 'P') {
+          this.player.firepowerLevel = Math.min(5, (this.player.firepowerLevel || 1) + 1);
+        } else if (p.type === 'B') {
+          this.player.bombs = Math.min(this.player.maxBombs, this.player.bombs + 1);
+        } else if (p.type === 'H') {
+          this.player.hp = Math.min(this.player.maxHp, this.player.hp + 25);
+          this.player.shield = Math.min(this.player.maxShield, this.player.shield + 25);
+        }
+      }
+    }
   }
 
   updateHUD() {
@@ -535,6 +599,18 @@ export class Game {
     const xpPct = (this.player.xp / this.player.xpToNextLevel) * 100;
     this.dom.xpFill.style.width = `${xpPct}%`;
     this.dom.xpText.innerText = `LV. ${this.player.level}`;
+    
+    // Super Gauge status update (linked to player.superPower)
+    const superPct = Math.min(100, this.player.superPower || 0);
+    if (this.dom.superFill && this.dom.superText) {
+      this.dom.superFill.style.width = `${superPct}%`;
+      this.dom.superText.innerText = `${Math.floor(superPct)}% ${superPct >= 100 ? '[READY: V]' : '[CHARGING]'}`;
+      if (superPct >= 100) {
+        this.dom.superFill.classList.add('sp-charged');
+      } else {
+        this.dom.superFill.classList.remove('sp-charged');
+      }
+    }
     
     // Void Bomb slots
     this.dom.bombsRow.innerHTML = '';
@@ -687,26 +763,42 @@ export class Game {
     }
     this[scrollVarName] = (this[scrollVarName] + speed) % drawHeight;
     
-    // 3. Render Copy 1: Upper tile (drawn partially offscreen, moving into view)
-    ctx.drawImage(img, 0, this[scrollVarName] - drawHeight, this.canvas.width, drawHeight);
-    
-    // 4. Render Copy 2: Lower tile (meeting Copy 1 exactly at the scroll offset)
-    ctx.drawImage(img, 0, this[scrollVarName], this.canvas.width, drawHeight);
-    
-    // 5. Seamless Seam-Blending Overlap Gradient
-    // We draw a small transparent overlay at the seam boundary to smoothly transition color tones!
+    // 3. Draw standard tiles with 80px overlap
+    const overlap = 80;
     const seamY = this[scrollVarName];
-    if (seamY > 0 && seamY < this.canvas.height) {
-      ctx.save();
-      const blendHeight = 32; // width of blend strip
-      const grad = ctx.createLinearGradient(0, seamY - blendHeight/2, 0, seamY + blendHeight/2);
-      grad.addColorStop(0, 'rgba(7, 7, 13, 0.0)');
-      grad.addColorStop(0.5, 'rgba(7, 7, 13, 0.4)'); // slightly darkens the edge to feather out the repeating line
-      grad.addColorStop(1, 'rgba(7, 7, 13, 0.0)');
-      ctx.fillStyle = grad;
-      ctx.fillRect(0, seamY - blendHeight/2, this.canvas.width, blendHeight);
-      ctx.restore();
+    
+    // Render Copy 1: Upper tile (drawn partially offscreen, moving into view)
+    ctx.drawImage(img, 0, seamY - drawHeight, this.canvas.width, drawHeight);
+    
+    // Render Copy 2: Lower tile (drawn below the overlap region to avoid early sharp cuts)
+    const overlapScale = overlap * scale;
+    if (seamY + overlapScale < this.canvas.height) {
+      ctx.drawImage(img, 
+        0, overlap, img.width, img.height - overlap, // source
+        0, seamY + overlapScale, this.canvas.width, drawHeight - overlapScale // destination
+      );
     }
+    
+    // 4. Render graduated transparency strips in the overlap zone (seamY to seamY + overlap)
+    // Slices the overlapping top edge of Copy 2 into 8 horizontal bands with increasing opacity
+    const strips = 8;
+    const stripHeightImg = overlap / strips;
+    const stripHeightCanvas = overlapScale / strips;
+    const alphas = [0.12, 0.25, 0.38, 0.5, 0.62, 0.75, 0.88, 1.0];
+    
+    ctx.save();
+    for (let j = 0; j < strips; j++) {
+      ctx.globalAlpha = alphas[j];
+      
+      const sy = j * stripHeightImg;
+      const dy = seamY + (j * stripHeightCanvas);
+      
+      ctx.drawImage(img,
+        0, sy, img.width, stripHeightImg, // source slice
+        0, dy, this.canvas.width, stripHeightCanvas // destination draw
+      );
+    }
+    ctx.restore();
   }
 
   /**
@@ -1263,6 +1355,7 @@ export class Game {
     // Draw active elements
     this.xpGems.forEach(gem => gem.draw(this.ctx));
     this.healthPacks.forEach(pack => pack.draw(this.ctx));
+    this.powerUps.forEach(p => p.draw(this.ctx));
     this.enemies.forEach(enemy => enemy.draw(this.ctx, this.player));
     this.bullets.forEach(bullet => bullet.draw(this.ctx));
     

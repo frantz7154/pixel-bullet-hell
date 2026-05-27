@@ -11,6 +11,13 @@
   --panel-bg: rgba(13, 13, 26, 0.7);
   --panel-border: rgba(0, 255, 255, 0.2);
   
+  /* Steampunk visual additions */
+  --copper: #b87333;
+  --bronze: #cd7f32;
+  --brass: #8c4a17;
+  --metal-shadow: #5c2f0d;
+  --dark-metal: #1c1a18;
+  
   --font-retro: 'Press Start 2P', monospace;
   --font-scifi: 'Orbitron', sans-serif;
 }
@@ -42,6 +49,17 @@ body, html {
   justify-content: center;
   align-items: center;
   overflow: hidden;
+}
+
+/* Glass curved CRT vignette screen glare overlay */
+.crt-container::before {
+  content: " ";
+  display: block;
+  position: absolute;
+  top: 0; left: 0; bottom: 0; right: 0;
+  background: radial-gradient(circle, transparent 55%, rgba(0, 0, 0, 0.5) 100%);
+  z-index: 22;
+  pointer-events: none;
 }
 
 .crt-screen {
@@ -236,59 +254,158 @@ body, html {
   padding-top: 10px;
 }
 
-/* Status Gauge Design */
+/* Status Gauge Design - Segmented Visor Panel with Corner Brackets & Corner Rivets */
 .status-gauge-wrapper {
-  background: var(--panel-bg);
-  border: 1px solid var(--panel-border);
+  position: relative;
+  background: 
+    /* Shaded corner brass rivets mathematically placed */
+    radial-gradient(circle at 6px 6px, #cd7f32 1.5px, #8c4a17 2.5px, transparent 3.5px) no-repeat top left,
+    radial-gradient(circle at 6px 6px, #cd7f32 1.5px, #8c4a17 2.5px, transparent 3.5px) no-repeat top right,
+    radial-gradient(circle at 6px 6px, #cd7f32 1.5px, #8c4a17 2.5px, transparent 3.5px) no-repeat bottom left,
+    radial-gradient(circle at 6px 6px, #cd7f32 1.5px, #8c4a17 2.5px, transparent 3.5px) no-repeat bottom right,
+    rgba(12, 10, 8, 0.93); /* glass screen color */
+  background-size: 12px 12px, 12px 12px, 12px 12px, 12px 12px, 100% 100%;
+  
+  border: 2px solid #8c4a17; /* dark bronze frame */
   border-radius: 4px;
-  padding: 10px 12px;
+  padding: 12px 14px;
   width: 100%;
   display: flex;
   flex-direction: column;
   gap: 6px;
-  backdrop-filter: blur(5px);
+  backdrop-filter: blur(8px);
   pointer-events: auto;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+  box-shadow: 
+    0 6px 20px rgba(0, 0, 0, 0.7),
+    inset 0 0 12px rgba(184, 115, 51, 0.15);
+}
+
+/* Corner brass mechanical brackets */
+.status-gauge-wrapper::before {
+  content: '';
+  position: absolute;
+  top: -2px; left: -2px; right: -2px; bottom: -2px;
+  border: 2px solid #b87333; /* copper corner highlights */
+  border-radius: 4px;
+  pointer-events: none;
+  z-index: 4;
+  mask: 
+    linear-gradient(to right, #000 12px, transparent 12px) 0 0,
+    linear-gradient(to left, #000 12px, transparent 12px) 100% 0,
+    linear-gradient(to right, #000 12px, transparent 12px) 0 100%,
+    linear-gradient(to left, #000 12px, transparent 12px) 100% 100%,
+    linear-gradient(to bottom, #000 12px, transparent 12px) 0 0,
+    linear-gradient(to bottom, #000 12px, transparent 12px) 100% 0,
+    linear-gradient(to top, #000 12px, transparent 12px) 0 100%,
+    linear-gradient(to top, #000 12px, transparent 12px) 100% 100%;
+  mask-repeat: no-repeat;
+  -webkit-mask: 
+    linear-gradient(to right, #000 12px, transparent 12px) 0 0,
+    linear-gradient(to left, #000 12px, transparent 12px) 100% 0,
+    linear-gradient(to right, #000 12px, transparent 12px) 0 100%,
+    linear-gradient(to left, #000 12px, transparent 12px) 100% 100%,
+    linear-gradient(to bottom, #000 12px, transparent 12px) 0 0,
+    linear-gradient(to bottom, #000 12px, transparent 12px) 100% 0,
+    linear-gradient(to top, #000 12px, transparent 12px) 0 100%,
+    linear-gradient(to top, #000 12px, transparent 12px) 100% 100%;
+  -webkit-mask-repeat: no-repeat;
 }
 
 .gauge-label {
   font-size: 10px;
-  letter-spacing: 1px;
-  color: rgba(255, 255, 255, 0.7);
+  letter-spacing: 2px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.85);
+  text-shadow: 0 1px 2px #000;
 }
 
+/* Visor HUD segmented glass look */
 .status-gauge {
   width: 100%;
-  height: 8px;
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 4px;
+  height: 12px; /* chunkier retro vacuum-tube display */
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(184, 115, 51, 0.35); /* copper bezel inside */
+  border-radius: 2px;
   overflow: hidden;
   position: relative;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.8);
+}
+
+/* LED segments display grids overlay */
+.status-gauge::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: repeating-linear-gradient(
+    90deg,
+    transparent,
+    transparent 6px,
+    #000000 6px,
+    #000000 8px
+  );
+  pointer-events: none;
+  z-index: 5;
 }
 
 .gauge-fill {
   height: 100%;
   width: 0%;
-  transition: width 0.15s ease-out;
-  box-shadow: 0 0 10px currentColor;
+  transition: width 0.12s ease-out;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4);
 }
 
 /* Gauge specific colors */
-.border-green { border-color: rgba(57, 255, 20, 0.25); }
-.border-blue { border-color: rgba(0, 255, 255, 0.25); }
-.border-pink { border-color: rgba(255, 45, 85, 0.25); }
+.border-green { border-color: rgba(57, 255, 20, 0.35); }
+.border-blue { border-color: rgba(0, 255, 255, 0.35); }
+.border-pink { border-color: rgba(255, 45, 85, 0.35); }
+.border-purple { border-color: rgba(189, 0, 255, 0.35); }
 
-.bg-green { background-color: var(--neon-green); color: var(--neon-green); }
-.bg-blue { background-color: var(--neon-blue); color: var(--neon-blue); }
-.bg-pink { background-color: var(--neon-pink); color: var(--neon-pink); }
+.bg-green { 
+  background: linear-gradient(180deg, #5eff3a 0%, #20b008 100%); 
+  filter: drop-shadow(0 0 4px #39ff14);
+}
+.bg-blue { 
+  background: linear-gradient(180deg, #3affff 0%, #00a8a8 100%); 
+  filter: drop-shadow(0 0 4px #00ffff);
+}
+.bg-pink { 
+  background: linear-gradient(180deg, #ff4c72 0%, #bd0828 100%); 
+  filter: drop-shadow(0 0 4px #ff2d55);
+}
+
+/* SP Gauge scrolling high energy vacuum stream animation */
+.bg-purple { 
+  background: linear-gradient(95deg, #bd00ff 0%, #ff2d55 50%, #bd00ff 100%);
+  background-size: 200% 100%;
+  animation: superFlow 1.5s linear infinite;
+  filter: drop-shadow(0 0 5px #bd00ff);
+}
+
+/* SP Gauge dramatic fully charged flash overlay */
+.bg-purple.sp-charged {
+  background: linear-gradient(95deg, #ffffff 0%, #bd00ff 30%, #ff2d55 50%, #bd00ff 70%, #ffffff 100%);
+  background-size: 200% 100%;
+  animation: superFlow 0.5s linear infinite, superFlash 0.3s linear infinite alternate;
+}
+
+@keyframes superFlow {
+  0% { background-position: 0% 0%; }
+  100% { background-position: -200% 0%; }
+}
+
+@keyframes superFlash {
+  0% { filter: brightness(1.0) drop-shadow(0 0 6px #bd00ff); }
+  100% { filter: brightness(1.7) drop-shadow(0 0 15px #ffffff); }
+}
 
 .gauge-text {
   font-size: 11px;
   text-align: right;
   font-weight: 700;
   letter-spacing: 1px;
-  color: #fff;
-  opacity: 0.9;
+  color: #ffffff;
+  opacity: 0.95;
+  text-shadow: 0 1px 2px #000;
 }
 
 /* Void Bombs indicator row */
@@ -334,8 +451,24 @@ body, html {
   width: 100%;
   height: 100%;
   z-index: 15;
-  background: rgba(7, 7, 13, 0.8);
-  backdrop-filter: blur(12px);
+  /* Thick double-framed copper border and ambient visor backlight with corner rivets */
+  background: 
+    radial-gradient(circle at 14px 14px, #cd7f32 3px, #8c4a17 5px, transparent 7px) no-repeat top left,
+    radial-gradient(circle at 14px 14px, #cd7f32 3px, #8c4a17 5px, transparent 7px) no-repeat top right,
+    radial-gradient(circle at 14px 14px, #cd7f32 3px, #8c4a17 5px, transparent 7px) no-repeat bottom left,
+    radial-gradient(circle at 14px 14px, #cd7f32 3px, #8c4a17 5px, transparent 7px) no-repeat bottom right,
+    radial-gradient(circle at center, rgba(14, 12, 28, 0.95) 0%, rgba(5, 5, 10, 0.98) 100%);
+  background-size: 28px 28px, 28px 28px, 28px 28px, 28px 28px, 100% 100%;
+  
+  border: 6px double #b87333; /* copper double-piping frame */
+  border-radius: 16px;
+  box-shadow: 
+    0 0 0 3px #5c2f0d, /* dark metal protective outer ring */
+    0 15px 40px rgba(0, 255, 255, 0.2), /* ambient cyber cyan visor glow */
+    inset 0 0 30px rgba(184, 115, 51, 0.3), /* inner copper trim reflections */
+    inset 0 0 80px rgba(0, 255, 255, 0.12); /* internal active instrumentation glow */
+  
+  backdrop-filter: blur(14px) saturate(1.7);
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -343,6 +476,33 @@ body, html {
   padding: 40px;
   text-align: center;
   transition: opacity 0.4s ease, visibility 0.4s ease;
+  overflow-y: auto;
+}
+
+/* Active scanning grid and sweeping laser overlay for the visor console */
+.menu-container::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: 
+    linear-gradient(rgba(0, 255, 255, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 255, 255, 0.025) 1px, transparent 1px),
+    linear-gradient(180deg, transparent 40%, rgba(0, 255, 255, 0.15) 50%, rgba(0, 255, 255, 0.15) 51%, transparent 60%);
+  background-size: 32px 32px, 32px 32px, 100% 600px;
+  pointer-events: none;
+  z-index: 2;
+  border-radius: 10px;
+  animation: visorGridSweep 8s linear infinite;
+  opacity: 0.8;
+}
+
+@keyframes visorGridSweep {
+  0% {
+    background-position: 0px 0px, 0px 0px, 0 0;
+  }
+  100% {
+    background-position: 0px 0px, 0px 0px, 0 600px;
+  }
 }
 
 .menu-container.hidden {
@@ -397,11 +557,70 @@ body, html {
   justify-content: center;
 }
 
+/* Industrial Cast Iron Panel Styling for Hangar Ship Select Cards */
+.ship-card {
+  position: relative;
+  flex: 1;
+  max-width: 280px;
+  background: 
+    /* Corner rivets */
+    radial-gradient(circle at 8px 8px, #cd7f32 2px, #8c4a17 3px, transparent 4px) no-repeat top left,
+    radial-gradient(circle at 8px 8px, #cd7f32 2px, #8c4a17 3px, transparent 4px) no-repeat top right,
+    radial-gradient(circle at 8px 8px, #cd7f32 2px, #8c4a17 3px, transparent 4px) no-repeat bottom left,
+    radial-gradient(circle at 8px 8px, #cd7f32 2px, #8c4a17 3px, transparent 4px) no-repeat bottom right,
+    /* Slate panel background */
+    linear-gradient(135deg, #1c1a18 0%, #100f0e 100%);
+  background-size: 16px 16px, 16px 16px, 16px 16px, 16px 16px, 100% 100%;
+  
+  border: 3px solid #8c4a17; /* brass frame */
+  border-radius: 8px;
+  padding: 25px 20px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.6);
+}
+
+.ship-card:hover {
+  transform: translateY(-6px);
+  border-color: #cd7f32;
+  box-shadow: 
+    0 15px 30px rgba(0, 255, 255, 0.15),
+    inset 0 0 15px rgba(0, 255, 255, 0.05);
+}
+
+.ship-card.active {
+  border-color: #ffd700; /* gold selection rim */
+  background: 
+    /* Active golden-brass rivets */
+    radial-gradient(circle at 8px 8px, #ffd700 2px, #b87333 3px, transparent 4px) no-repeat top left,
+    radial-gradient(circle at 8px 8px, #ffd700 2px, #b87333 3px, transparent 4px) no-repeat top right,
+    radial-gradient(circle at 8px 8px, #ffd700 2px, #b87333 3px, transparent 4px) no-repeat bottom left,
+    radial-gradient(circle at 8px 8px, #ffd700 2px, #b87333 3px, transparent 4px) no-repeat bottom right,
+    linear-gradient(135deg, #241d1a 0%, #151110 100%);
+  background-size: 16px 16px, 16px 16px, 16px 16px, 16px 16px, 100% 100%;
+  box-shadow: 
+    0 0 25px rgba(184, 115, 51, 0.4),
+    inset 0 0 20px rgba(0, 255, 255, 0.15);
+  transform: scale(1.04);
+}
+
+/* Zone Selection Cards */
 .stage-card {
+  position: relative;
   flex: 1;
   max-width: 260px;
-  background: rgba(13, 13, 26, 0.45);
-  border: 2px solid rgba(255, 255, 255, 0.08);
+  background: 
+    radial-gradient(circle at 6px 6px, #cd7f32 1.5px, #8c4a17 2.5px, transparent 3.5px) no-repeat top left,
+    radial-gradient(circle at 6px 6px, #cd7f32 1.5px, #8c4a17 2.5px, transparent 3.5px) no-repeat top right,
+    radial-gradient(circle at 6px 6px, #cd7f32 1.5px, #8c4a17 2.5px, transparent 3.5px) no-repeat bottom left,
+    radial-gradient(circle at 6px 6px, #cd7f32 1.5px, #8c4a17 2.5px, transparent 3.5px) no-repeat bottom right,
+    linear-gradient(135deg, #181715 0%, #0d0c0b 100%);
+  background-size: 12px 12px, 12px 12px, 12px 12px, 12px 12px, 100% 100%;
+  
+  border: 2px solid #8c4a17;
   border-radius: 6px;
   padding: 15px;
   cursor: pointer;
@@ -409,16 +628,24 @@ body, html {
   display: flex;
   flex-direction: column;
   align-items: center;
+  box-shadow: 0 6px 12px rgba(0,0,0,0.5);
 }
 
 .stage-card:hover {
   transform: translateY(-4px);
-  border-color: rgba(0, 255, 255, 0.4);
-  background: rgba(13, 13, 26, 0.65);
+  border-color: #cd7f32;
+  box-shadow: 0 10px 18px rgba(0,0,0,0.6);
 }
 
 .stage-card.active {
-  background: rgba(13, 13, 26, 0.85);
+  border-color: #ffd700;
+  background: 
+    radial-gradient(circle at 6px 6px, #ffd700 1.5px, #b87333 2.5px, transparent 3.5px) no-repeat top left,
+    radial-gradient(circle at 6px 6px, #ffd700 1.5px, #b87333 2.5px, transparent 3.5px) no-repeat top right,
+    radial-gradient(circle at 6px 6px, #ffd700 1.5px, #b87333 2.5px, transparent 3.5px) no-repeat bottom left,
+    radial-gradient(circle at 6px 6px, #ffd700 1.5px, #b87333 2.5px, transparent 3.5px) no-repeat bottom right,
+    linear-gradient(135deg, #201a18 0%, #100d0c 100%);
+  background-size: 12px 12px, 12px 12px, 12px 12px, 12px 12px, 100% 100%;
   transform: scale(1.03);
 }
 
@@ -460,34 +687,6 @@ body, html {
   color: rgba(255, 255, 255, 0.6);
   line-height: 1.4;
   text-align: center;
-}
-
-.ship-card {
-  flex: 1;
-  max-width: 280px;
-  background: rgba(13, 13, 26, 0.4);
-  border: 2px solid rgba(255, 255, 255, 0.08);
-  border-radius: 8px;
-  padding: 25px 20px;
-  cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-.ship-card:hover {
-  transform: translateY(-8px);
-  border-color: rgba(0, 255, 255, 0.4);
-  background: rgba(13, 13, 26, 0.6);
-  box-shadow: 0 10px 25px rgba(0, 255, 255, 0.1);
-}
-
-.ship-card.active {
-  border-color: var(--neon-blue);
-  background: rgba(13, 13, 26, 0.8);
-  box-shadow: 0 0 25px rgba(0, 255, 255, 0.25);
-  transform: scale(1.05);
 }
 
 /* Ship Preview */
@@ -570,45 +769,79 @@ body, html {
 }
 
 /* Buttons */
+/* Tactile Copper Pressure Buttons */
 .btn {
-  border: none;
+  border: 2px solid #cd7f32; /* bronze bevel */
   outline: none;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 13px;
+  font-family: var(--font-retro);
   letter-spacing: 2px;
   padding: 16px 36px;
-  border-radius: 4px;
-  transition: all 0.2s ease;
+  border-radius: 6px;
+  /* physical dimensional 3D look with gradient */
+  background: linear-gradient(135deg, #b87333, #8c4a17);
+  color: #ffffff;
+  text-shadow: 0 2px 3px rgba(0, 0, 0, 0.8);
+  box-shadow: 
+    0 5px 0 #5c2f0d, /* deep dimensional shadow */
+    0 8px 15px rgba(0, 0, 0, 0.6);
+  transition: all 0.15s cubic-bezier(0.25, 0.8, 0.25, 1);
   position: relative;
-  overflow: hidden;
+  transform: translateY(0);
 }
 
 .btn-primary {
-  background: var(--neon-blue);
-  color: #000000;
-  font-weight: 900;
-  box-shadow: 0 0 20px rgba(0, 255, 255, 0.4);
+  border-color: #ffd700; /* gold trim for primary buttons */
+  background: linear-gradient(135deg, #d37d36, #9b4f17);
 }
 
+/* Hover: Slight pressure depression + glowing feedback */
 .btn-primary:hover {
-  background: #ffffff;
-  box-shadow: 0 0 30px #ffffff;
-  transform: scale(1.05);
+  background: linear-gradient(135deg, #e48d47, #b25f23);
+  box-shadow: 
+    0 3px 0 #5c2f0d, /* button goes down slightly */
+    0 5px 10px rgba(0, 0, 0, 0.4),
+    0 0 15px var(--neon-blue); /* cyber cyan hover field glow */
+  transform: translateY(2px);
+  color: #00ffff;
+  text-shadow: 0 0 8px rgba(0, 255, 255, 0.6);
+}
+
+/* Active: Fully pressed down + neon yellow discharge flash */
+.btn-primary:active {
+  background: linear-gradient(135deg, #fba965, #c77434);
+  box-shadow: 
+    0 1px 0 #5c2f0d, /* fully depressed */
+    0 2px 4px rgba(0, 0, 0, 0.2),
+    0 0 25px var(--neon-yellow); /* electrical discharge yellow flash */
+  transform: translateY(4px);
 }
 
 .btn-secondary {
-  background: transparent;
-  color: var(--neon-pink);
-  border: 2px solid var(--neon-pink);
-  font-weight: 900;
-  box-shadow: inset 0 0 10px rgba(255, 45, 85, 0.2), 0 0 20px rgba(255, 45, 85, 0.2);
+  border-color: #cd7f32;
+  background: linear-gradient(135deg, #8c4a17, #5c2f0d);
+  color: #ffa5aa;
 }
 
 .btn-secondary:hover {
-  background: var(--neon-pink);
-  color: #ffffff;
-  box-shadow: 0 0 30px var(--neon-pink);
-  transform: scale(1.05);
+  background: linear-gradient(135deg, #a05a20, #733c10);
+  box-shadow: 
+    0 3px 0 #3c1e08, 
+    0 5px 10px rgba(0, 0, 0, 0.4),
+    0 0 15px var(--neon-pink); /* neon pink hover glow */
+  transform: translateY(2px);
+  color: #ff2d55;
+  text-shadow: 0 0 8px rgba(255, 45, 85, 0.6);
+}
+
+.btn-secondary:active {
+  background: linear-gradient(135deg, #bd6d2c, #8c4a17);
+  box-shadow: 
+    0 1px 0 #3c1e08,
+    0 2px 4px rgba(0, 0, 0, 0.2),
+    0 0 25px #ffffff;
+  transform: translateY(4px);
 }
 
 .controls-guide {
@@ -645,65 +878,160 @@ body, html {
   justify-content: center;
 }
 
+/* Microchip PCB Upgrades */
 .upgrade-card {
+  position: relative;
   flex: 1;
   max-width: 240px;
-  background: rgba(13, 13, 26, 0.85);
-  border: 2px solid var(--neon-blue);
+  /* Deep green cybernetic soldermask base with gold traces grid & solder vias */
+  background: linear-gradient(135deg, #093018 0%, #03150a 100%);
+  background-image: 
+    linear-gradient(90deg, rgba(212, 175, 55, 0.05) 1px, transparent 1px),
+    linear-gradient(0deg, rgba(212, 175, 55, 0.05) 1px, transparent 1px),
+    radial-gradient(circle, #ffd700 1px, transparent 2px);
+  background-size: 16px 16px, 16px 16px, 32px 32px;
+  
+  border: 3px solid #cd7f32; /* brass border bezel */
   border-radius: 8px;
-  padding: 30px 20px;
+  padding: 32px 18px;
   cursor: pointer;
   transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
   display: flex;
   flex-direction: column;
   align-items: center;
-  box-shadow: 0 0 15px rgba(0, 255, 255, 0.1);
+  box-shadow: 
+    0 10px 25px rgba(0, 0, 0, 0.75),
+    inset 0 0 20px rgba(57, 255, 20, 0.15); /* glowing internal printed currents */
 }
 
-.upgrade-card:hover {
-  transform: translateY(-8px) scale(1.03);
-  box-shadow: 0 0 25px var(--neon-blue);
-  border-color: #ffffff;
+/* Gold connector card-edge fingers at the top edge */
+.upgrade-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 15px; right: 15px;
+  height: 10px;
+  background: repeating-linear-gradient(
+    90deg,
+    #ffd700 0px,
+    #ffd700 4px,
+    transparent 4px,
+    transparent 8px
+  );
+  border-bottom: 2px solid #b87333;
+  opacity: 0.85;
 }
 
-.upgrade-card.type-weapon {
-  border-color: var(--neon-blue);
+/* Gold connector card-edge fingers at the bottom edge */
+.upgrade-card::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 15px; right: 15px;
+  height: 10px;
+  background: repeating-linear-gradient(
+    90deg,
+    #ffd700 0px,
+    #ffd700 4px,
+    transparent 4px,
+    transparent 8px
+  );
+  border-top: 2px solid #b87333;
+  opacity: 0.85;
 }
 
-.upgrade-card.type-def {
-  border-color: var(--neon-purple);
-}
-
-.upgrade-card.type-stat {
-  border-color: var(--neon-pink);
-}
-
-.upgrade-card.type-special {
-  border-color: var(--neon-yellow);
-}
-
+/* Upgrade Card Types indicators: Onboard microchip packaging */
 .upgrade-icon {
-  width: 40px;
-  height: 40px;
-  margin-bottom: 15px;
-  background-size: contain;
-  background-repeat: no-repeat;
-  background-position: center;
-  image-rendering: pixelated;
+  position: relative;
+  width: 52px;
+  height: 52px;
+  background: #111115;
+  border: 2px solid #3c1e08;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+  box-shadow: 
+    0 4px 8px rgba(0, 0, 0, 0.6),
+    inset 0 0 8px rgba(255, 255, 255, 0.1);
 }
 
-.upgrade-name {
-  font-family: var(--font-retro);
-  font-size: 11px;
-  text-align: center;
-  margin-bottom: 12px;
-  letter-spacing: 1px;
+/* DIP Chip side-pins representation */
+.upgrade-icon::before {
+  content: '';
+  position: absolute;
+  top: 6px; bottom: 6px; left: -6px; right: -6px;
+  border-left: 4px double #b87333; /* brass side pins */
+  border-right: 4px double #b87333;
+  pointer-events: none;
 }
 
-.upgrade-card.type-weapon .upgrade-name { color: var(--neon-blue); }
-.upgrade-card.type-def .upgrade-name { color: var(--neon-purple); }
-.upgrade-card.type-stat .upgrade-name { color: var(--neon-pink); }
-.upgrade-card.type-special .upgrade-name { color: var(--neon-yellow); }
+/* Solder dot at the pin-1 marker position of the chip */
+.upgrade-icon::after {
+  content: '';
+  position: absolute;
+  top: 4px; left: 4px;
+  width: 4px; height: 4px;
+  background: #b87333;
+  border-radius: 50%;
+}
+
+/* Hover: Gold traces supercharge and fire up high energy glows */
+.upgrade-card:hover {
+  transform: translateY(-8px) scale(1.04);
+  border-color: #ffd700;
+  box-shadow: 
+    0 15px 30px rgba(57, 255, 20, 0.3),
+    inset 0 0 25px rgba(57, 255, 20, 0.3);
+}
+
+/* Board styling per upgrade category (LED glows & indicator tracks) */
+.upgrade-card.type-weapon { 
+  border-color: var(--neon-blue); 
+  box-shadow: 0 0 15px rgba(0, 255, 255, 0.15), inset 0 0 15px rgba(0, 255, 255, 0.1);
+}
+.upgrade-card.type-weapon:hover {
+  border-color: #ffffff;
+  box-shadow: 0 15px 30px rgba(0, 255, 255, 0.4), inset 0 0 25px rgba(0, 255, 255, 0.3);
+}
+.upgrade-card.type-weapon .upgrade-name {
+  color: var(--neon-blue);
+}
+
+.upgrade-card.type-def { 
+  border-color: var(--neon-purple); 
+  box-shadow: 0 0 15px rgba(189, 0, 255, 0.15), inset 0 0 15px rgba(189, 0, 255, 0.1);
+}
+.upgrade-card.type-def:hover {
+  border-color: #ffffff;
+  box-shadow: 0 15px 30px rgba(189, 0, 255, 0.4), inset 0 0 25px rgba(189, 0, 255, 0.3);
+}
+.upgrade-card.type-def .upgrade-name {
+  color: var(--neon-purple);
+}
+
+.upgrade-card.type-stat { 
+  border-color: var(--neon-pink); 
+  box-shadow: 0 0 15px rgba(255, 45, 85, 0.15), inset 0 0 15px rgba(255, 45, 85, 0.1);
+}
+.upgrade-card.type-stat:hover {
+  border-color: #ffffff;
+  box-shadow: 0 15px 30px rgba(255, 45, 85, 0.4), inset 0 0 25px rgba(255, 45, 85, 0.3);
+}
+.upgrade-card.type-stat .upgrade-name {
+  color: var(--neon-pink);
+}
+
+.upgrade-card.type-special { 
+  border-color: var(--neon-yellow); 
+  box-shadow: 0 0 15px rgba(255, 240, 31, 0.15), inset 0 0 15px rgba(255, 240, 31, 0.1);
+}
+.upgrade-card.type-special:hover {
+  border-color: #ffffff;
+  box-shadow: 0 15px 30px rgba(255, 240, 31, 0.4), inset 0 0 25px rgba(255, 240, 31, 0.3);
+}
+.upgrade-card.type-special .upgrade-name {
+  color: var(--neon-yellow);
+}
 
 .upgrade-rarity {
   font-size: 9px;
@@ -767,10 +1095,16 @@ body, html {
    NEON AUDIO CONTROLS PANEL
    ========================================================================== */
 .audio-control-panel {
-  background: rgba(13, 13, 26, 0.6);
-  border: 1px dashed rgba(0, 255, 255, 0.3);
+  background: 
+    radial-gradient(circle at 6px 6px, #cd7f32 1.5px, #8c4a17 2.5px, transparent 3.5px) no-repeat top left,
+    radial-gradient(circle at 6px 6px, #cd7f32 1.5px, #8c4a17 2.5px, transparent 3.5px) no-repeat top right,
+    radial-gradient(circle at 6px 6px, #cd7f32 1.5px, #8c4a17 2.5px, transparent 3.5px) no-repeat bottom left,
+    radial-gradient(circle at 6px 6px, #cd7f32 1.5px, #8c4a17 2.5px, transparent 3.5px) no-repeat bottom right,
+    linear-gradient(180deg, #151312 0%, #0d0c0c 100%);
+  background-size: 12px 12px, 12px 12px, 12px 12px, 12px 12px, 100% 100%;
+  border: 2px solid #8c4a17;
   border-radius: 8px;
-  padding: 15px 25px;
+  padding: 18px 25px;
   margin-top: 10px;
   margin-bottom: 25px;
   width: 100%;
@@ -778,7 +1112,9 @@ body, html {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  box-shadow: inset 0 0 10px rgba(0, 255, 255, 0.05);
+  box-shadow: 
+    0 8px 16px rgba(0, 0, 0, 0.6),
+    inset 0 0 15px rgba(184, 115, 51, 0.15);
   pointer-events: auto;
 }
 

@@ -100,6 +100,13 @@ export class Player {
     this.posHistory = [];
     this.hasHeavyMissile = false;
     this.lastHeavyMissileTime = 0;
+
+    // Super ability status variables
+    this.firepowerLevel = 1;
+    this.superPower = 0;
+    this.superActive = false;
+    this.superType = '';
+    this.superEndTime = 0;
   }
 
   initShipStats() {
@@ -116,6 +123,11 @@ export class Player {
     this.posHistory = [];
     this.hasHeavyMissile = false;
     this.lastHeavyMissileTime = 0;
+    this.firepowerLevel = 1;
+    this.superPower = 0;
+    this.superActive = false;
+    this.superType = '';
+    this.superEndTime = 0;
     
     switch (this.shipType) {
       case 'aegis':
@@ -175,6 +187,112 @@ export class Player {
   }
 
   update(keys, mouseX, mouseY, canvasWidth, canvasHeight, bullets, enemies) {
+    // Check if Super activation key is pressed
+    if ((keys['v'] || keys['V']) && this.superPower >= 100 && !this.superActive) {
+      this.superPower = 0;
+      this.superActive = true;
+      this.superType = this.shipType;
+      
+      let duration = 4000; // Vanguard: 4s
+      if (this.shipType === 'aegis') duration = 6000; // Aegis: 6s
+      else if (this.shipType === 'sentinel') duration = 5000; // Sentinel: 5s
+      
+      this.superEndTime = Date.now() + duration;
+      audioSystem.playUpgrade(); // Play activation audio feedback
+    }
+
+    // Super decay / ending check
+    if (this.superActive) {
+      if (Date.now() > this.superEndTime) {
+        this.superActive = false;
+        this.superType = '';
+        if (this.shipType === 'sentinel') {
+          this.spawnDrones(); // Reset to 2 drones
+        }
+      }
+    }
+
+    // Vanguard ultimate column beam tick & bullet clear
+    if (this.superActive && this.superType === 'vanguard') {
+      enemies.forEach(e => {
+        if (!e.isDead && e.x >= this.x - 40 && e.x <= this.x + 40 && e.y <= this.y) {
+          e.takeDamage(1.5);
+          if (Math.random() < 0.2) {
+            ParticleFactory.spawnSpark(e.x, e.y, 0, 0, '#00ffff');
+          }
+        }
+      });
+      bullets.forEach(b => {
+        if (!b.isPlayer && b.x >= this.x - 40 && b.x <= this.x + 40 && b.y <= this.y) {
+          b.isDead = true;
+        }
+      });
+    }
+
+    // Aegis ultimate barrier push & bullet clear
+    if (this.superActive && this.superType === 'aegis') {
+      enemies.forEach(e => {
+        if (!e.isDead) {
+          const dx = e.x - this.x;
+          const dy = e.y - this.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < 120) {
+            const angle = Math.atan2(dy, dx);
+            e.x = this.x + Math.cos(angle) * 120;
+            e.y = this.y + Math.sin(angle) * 120;
+            e.vx = Math.cos(angle) * 4;
+            e.vy = Math.sin(angle) * 4;
+          }
+        }
+      });
+      bullets.forEach(b => {
+        if (!b.isPlayer) {
+          const dx = b.x - this.x;
+          const dy = b.y - this.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < 120) {
+            b.isDead = true;
+          }
+        }
+      });
+    }
+
+    // Sentinel ultimate helper drones expand & rapid zap
+    if (this.superActive && this.superType === 'sentinel') {
+      if (this.drones.length !== 8) {
+        this.drones = [];
+        for (let i = 0; i < 8; i++) {
+          this.drones.push({ angle: (i / 8) * Math.PI * 2, distance: 60, x: 0, y: 0 });
+        }
+      }
+      
+      const time = Date.now();
+      this.drones.forEach((drone, idx) => {
+        drone.angle += 0.08;
+        drone.x = this.x + Math.cos(drone.angle) * drone.distance;
+        drone.y = this.y + Math.sin(drone.angle) * drone.distance;
+        
+        if (Math.random() < 0.3) {
+          ParticleFactory.spawnThruster(drone.x, drone.y, drone.angle, '#ff2d55');
+        }
+        
+        if (!drone.lastSuperFire || time - drone.lastSuperFire > 120) {
+          drone.lastSuperFire = time;
+          const nearest = this.findNearestEnemy(enemies);
+          if (nearest) {
+            const droneAngle = Math.atan2(nearest.y - drone.y, nearest.x - drone.x);
+            bullets.push(new Bullet(drone.x, drone.y, droneAngle, 16, this.bulletDamage * 0.5, true, {
+              color: '#ff2d55',
+              radius: 3,
+              isLaser: true,
+              laserLength: 120,
+              isSentinelBullet: true
+            }));
+          }
+        }
+      });
+    }
+
     // Maintain trailing coordinate history for the Shadow Clone
     this.posHistory.push({ x: this.x, y: this.y, angle: this.angle });
     if (this.posHistory.length > 15) {
@@ -227,7 +345,7 @@ export class Player {
     );
     
     // 5. Update sub-drones (Sentinel class)
-    if (this.shipType === 'sentinel') {
+    if (this.shipType === 'sentinel' && !(this.superActive && this.superType === 'sentinel')) {
       const time = Date.now();
       this.drones.forEach((drone, idx) => {
         // Drone rotates around player
@@ -314,29 +432,66 @@ export class Player {
       }));
     }
     
-    // Front Shot
-    if (this.hasDoubleShot) {
-      // Secondary twin parallel wing barrels
-      const barrelOffset = 14;
-      const bx1 = this.x + Math.cos(this.angle + Math.PI / 2) * barrelOffset;
-      const by1 = this.y + Math.sin(this.angle + Math.PI / 2) * barrelOffset;
-      const bx2 = this.x + Math.cos(this.angle - Math.PI / 2) * barrelOffset;
-      const by2 = this.y + Math.sin(this.angle - Math.PI / 2) * barrelOffset;
+    // Setup ship-specific bullet options based on ship type
+    let bOptions = { pierce: this.bulletPierce };
+    if (this.shipType === 'vanguard') {
+      bOptions.color = '#00ffff';
+      bOptions.radius = 4;
+      bOptions.isVanguardBullet = true;
+    } else if (this.shipType === 'aegis') {
+      bOptions.color = '#bd00ff';
+      bOptions.radius = 6;
+      bOptions.isAegisBullet = true;
+    } else if (this.shipType === 'sentinel') {
+      bOptions.color = '#ff2d55';
+      bOptions.radius = 3;
+      bOptions.isSentinelBullet = true;
+    }
+
+    const lvl = this.firepowerLevel || 1;
+    if (lvl === 1) {
+      bullets.push(new Bullet(this.x, this.y, this.angle, bulletSpeed, this.bulletDamage, true, bOptions));
+    } else if (lvl === 2) {
+      const bx1 = this.x + Math.cos(this.angle + Math.PI / 2) * 10;
+      const by1 = this.y + Math.sin(this.angle + Math.PI / 2) * 10;
+      const bx2 = this.x + Math.cos(this.angle - Math.PI / 2) * 10;
+      const by2 = this.y + Math.sin(this.angle - Math.PI / 2) * 10;
+      bullets.push(new Bullet(bx1, by1, this.angle, bulletSpeed, this.bulletDamage, true, bOptions));
+      bullets.push(new Bullet(bx2, by2, this.angle, bulletSpeed, this.bulletDamage, true, bOptions));
+    } else if (lvl === 3) {
+      bullets.push(new Bullet(this.x, this.y, this.angle, bulletSpeed, this.bulletDamage, true, bOptions));
+      bullets.push(new Bullet(this.x, this.y, this.angle - 0.15, bulletSpeed, this.bulletDamage, true, bOptions));
+      bullets.push(new Bullet(this.x, this.y, this.angle + 0.15, bulletSpeed, this.bulletDamage, true, bOptions));
+    } else if (lvl === 4) {
+      const bx1 = this.x + Math.cos(this.angle + Math.PI / 2) * 10;
+      const by1 = this.y + Math.sin(this.angle + Math.PI / 2) * 10;
+      const bx2 = this.x + Math.cos(this.angle - Math.PI / 2) * 10;
+      const by2 = this.y + Math.sin(this.angle - Math.PI / 2) * 10;
+      bullets.push(new Bullet(bx1, by1, this.angle, bulletSpeed, this.bulletDamage, true, bOptions));
+      bullets.push(new Bullet(bx2, by2, this.angle, bulletSpeed, this.bulletDamage, true, bOptions));
       
-      bullets.push(new Bullet(bx1, by1, this.angle, bulletSpeed, this.bulletDamage, true, {
-        pierce: this.bulletPierce,
-        color: this.colorTheme
-      }));
-      bullets.push(new Bullet(bx2, by2, this.angle, bulletSpeed, this.bulletDamage, true, {
-        pierce: this.bulletPierce,
-        color: this.colorTheme
-      }));
-    } else {
-      // Standard single center barrel
-      bullets.push(new Bullet(this.x, this.y, this.angle, bulletSpeed, this.bulletDamage, true, {
-        pierce: this.bulletPierce,
-        color: this.colorTheme
-      }));
+      const bdx1 = this.x + Math.cos(this.angle + Math.PI / 2) * 15;
+      const bdy1 = this.y + Math.sin(this.angle + Math.PI / 2) * 15;
+      const bdx2 = this.x + Math.cos(this.angle - Math.PI / 2) * 15;
+      const bdy2 = this.y + Math.sin(this.angle - Math.PI / 2) * 15;
+      bullets.push(new Bullet(bdx1, bdy1, this.angle - 0.2, bulletSpeed, this.bulletDamage, true, bOptions));
+      bullets.push(new Bullet(bdx2, bdy2, this.angle + 0.2, bulletSpeed, this.bulletDamage, true, bOptions));
+    } else if (lvl >= 5) {
+      bullets.push(new Bullet(this.x, this.y, this.angle, bulletSpeed, this.bulletDamage, true, bOptions));
+      
+      const bx1 = this.x + Math.cos(this.angle + Math.PI / 2) * 10;
+      const by1 = this.y + Math.sin(this.angle + Math.PI / 2) * 10;
+      const bx2 = this.x + Math.cos(this.angle - Math.PI / 2) * 10;
+      const by2 = this.y + Math.sin(this.angle - Math.PI / 2) * 10;
+      bullets.push(new Bullet(bx1, by1, this.angle, bulletSpeed, this.bulletDamage, true, bOptions));
+      bullets.push(new Bullet(bx2, by2, this.angle, bulletSpeed, this.bulletDamage, true, bOptions));
+      
+      const bdx1 = this.x + Math.cos(this.angle + Math.PI / 2) * 18;
+      const bdy1 = this.y + Math.sin(this.angle + Math.PI / 2) * 18;
+      const bdx2 = this.x + Math.cos(this.angle - Math.PI / 2) * 18;
+      const bdy2 = this.y + Math.sin(this.angle - Math.PI / 2) * 18;
+      bullets.push(new Bullet(bdx1, bdy1, this.angle - 0.25, bulletSpeed, this.bulletDamage, true, bOptions));
+      bullets.push(new Bullet(bdx2, bdy2, this.angle + 0.25, bulletSpeed, this.bulletDamage, true, bOptions));
     }
     
     // Rear Blaster Upgrade
@@ -389,6 +544,8 @@ export class Player {
   }
 
   takeDamage(amount) {
+    if (this.superActive && this.superType === 'aegis') return false;
+    
     const time = Date.now();
     if (time - this.lastDamageTime < this.invincibilityDuration) return false;
     
@@ -537,6 +694,47 @@ export class Player {
   draw(ctx) {
     if (this.isDead) return;
     
+    // Draw Vanguard Hyperion Beam Visual Overlay
+    if (this.superActive && this.superType === 'vanguard') {
+      ctx.save();
+      ctx.globalAlpha = 0.5 + Math.sin(Date.now() * 0.05) * 0.2;
+      ctx.fillStyle = '#00ffff';
+      ctx.shadowBlur = 30;
+      ctx.shadowColor = '#00ffff';
+      ctx.fillRect(this.x - 40 + camera.x, camera.y, 80, this.y);
+      
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(this.x - 15 + camera.x, camera.y, 30, this.y);
+      ctx.restore();
+    }
+    
+    // Draw Aegis ultimate barrier glowing bubble
+    if (this.superActive && this.superType === 'aegis') {
+      ctx.save();
+      ctx.translate(this.x + camera.x, this.y + camera.y);
+      ctx.globalAlpha = 0.3 + Math.sin(Date.now() * 0.03) * 0.1;
+      ctx.fillStyle = 'rgba(189, 0, 255, 0.15)';
+      ctx.strokeStyle = '#bd00ff';
+      ctx.lineWidth = 4;
+      ctx.shadowBlur = 25;
+      ctx.shadowColor = '#bd00ff';
+      
+      ctx.beginPath();
+      ctx.arc(0, 0, 120, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      
+      ctx.strokeStyle = 'rgba(189, 0, 255, 0.3)';
+      ctx.lineWidth = 1;
+      for (let i = 0; i < 6; i++) {
+        const angle = (i / 6) * Math.PI * 2 + (Date.now() * 0.001);
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(Math.cos(angle) * 120, Math.sin(angle) * 120);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
     // Draw Chrono Field
     if (this.hasChronoField) {
       ctx.save();
@@ -621,6 +819,38 @@ export class Player {
         ctx.fillRect(-2, -2, 4, 4);
         ctx.restore();
       });
+      
+      // Draw spectacular ultimate zapping electric arcs between drones & player
+      if (this.superActive && this.superType === 'sentinel') {
+        ctx.save();
+        ctx.strokeStyle = 'rgba(255, 45, 85, 0.5)';
+        ctx.lineWidth = 1.5;
+        ctx.shadowBlur = 8;
+        ctx.shadowColor = '#ff2d55';
+        
+        ctx.beginPath();
+        for (let i = 0; i < this.drones.length; i++) {
+          const d1 = this.drones[i];
+          const d2 = this.drones[(i + 1) % this.drones.length];
+          if (i === 0) {
+            ctx.moveTo(d1.x + camera.x, d1.y + camera.y);
+          } else {
+            ctx.lineTo(d1.x + camera.x, d1.y + camera.y);
+          }
+          ctx.lineTo(d2.x + camera.x, d2.y + camera.y);
+        }
+        ctx.closePath();
+        ctx.stroke();
+        
+        if (Math.random() < 0.4) {
+          ctx.beginPath();
+          const randDrone = this.drones[Math.floor(Math.random() * this.drones.length)];
+          ctx.moveTo(this.x + camera.x, this.y + camera.y);
+          ctx.lineTo(randDrone.x + camera.x, randDrone.y + camera.y);
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
     }
   }
 }

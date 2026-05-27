@@ -2,7 +2,8 @@
  * Bullet.js - Ammo and Weapon Trajectory Engine
  * Manages player weapons and mathematically driven enemy bullet-hell patterns.
  */
-import { camera } from './Particle.js';
+import { camera, Particle, ParticleFactory } from './Particle.js';
+
 
 export class Bullet {
   constructor(x, y, angle, speed, damage, isPlayer, options = {}) {
@@ -43,6 +44,12 @@ export class Bullet {
     // Premium Upgrade fields
     this.isHeavyMissile = options.isHeavyMissile || false;
     this.isSlowed = false;
+    
+    // Ship bullet types
+    this.isVanguardBullet = options.isVanguardBullet || false;
+    this.isAegisBullet = options.isAegisBullet || false;
+    this.isSentinelBullet = options.isSentinelBullet || false;
+
     
     // Velocities
     this.vx = Math.cos(angle) * speed;
@@ -109,6 +116,28 @@ export class Bullet {
       // Normal linear motion
       this.x += this.vx;
       this.y += this.vy;
+    }
+
+    if (Math.random() < 0.4) {
+      if (this.isVanguardBullet) {
+        const size = Math.random() * 3 + 1;
+        const life = Math.random() * 12 + 6;
+        const vx = (Math.random() - 0.5) * 0.5;
+        const vy = (Math.random() - 0.5) * 0.5;
+        ParticleFactory.particles.push(new Particle(this.x, this.y, vx, vy, '#00ffff', size, life, 'square', true, 0.97));
+      } else if (this.isAegisBullet) {
+        const size = Math.random() * 3.5 + 1.5;
+        const life = Math.random() * 15 + 8;
+        const vx = (Math.random() - 0.5) * 0.5;
+        const vy = (Math.random() - 0.5) * 0.5;
+        ParticleFactory.particles.push(new Particle(this.x, this.y, vx, vy, '#bd00ff', size, life, 'circle', true, 0.96));
+      } else if (this.isSentinelBullet) {
+        const size = Math.random() * 2.5 + 1;
+        const life = Math.random() * 10 + 5;
+        const vx = (Math.random() - 0.5) * 0.5;
+        const vy = (Math.random() - 0.5) * 0.5;
+        ParticleFactory.particles.push(new Particle(this.x, this.y, vx, vy, '#ff2d55', size, life, 'square', true, 0.95));
+      }
     }
   }
 
