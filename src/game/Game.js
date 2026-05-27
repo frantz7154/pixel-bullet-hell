@@ -409,7 +409,7 @@ export class Game {
               // Drop Cyber Power-Up (8% chance drone, 15% spinner/sniper)
               const pDropChance = e.type === 'drone' ? 0.08 : (e.type === 'spinner' || e.type === 'sniper' ? 0.15 : 0.0);
               if (Math.random() < pDropChance) {
-                const types = ['P', 'B', 'H'];
+                const types = ['P', 'B', 'H', 'S'];
                 const chosenType = types[Math.floor(Math.random() * types.length)];
                 this.powerUps.push(new PowerUp(e.x, e.y, chosenType));
               }
@@ -451,7 +451,7 @@ export class Game {
                     // Drop Cyber Power-Up for splash kills (8% drone, 15% spinner/sniper)
                     const pDropChance = enemy.type === 'drone' ? 0.08 : (enemy.type === 'spinner' || enemy.type === 'sniper' ? 0.15 : 0.0);
                     if (Math.random() < pDropChance) {
-                      const types = ['P', 'B', 'H'];
+                      const types = ['P', 'B', 'H', 'S'];
                       const chosenType = types[Math.floor(Math.random() * types.length)];
                       this.powerUps.push(new PowerUp(enemy.x, enemy.y, chosenType));
                     }
@@ -576,6 +576,8 @@ export class Game {
         } else if (p.type === 'H') {
           this.player.hp = Math.min(this.player.maxHp, this.player.hp + 25);
           this.player.shield = Math.min(this.player.maxShield, this.player.shield + 25);
+        } else if (p.type === 'S') {
+          this.player.superPower = 100;
         }
       }
     }
@@ -1317,8 +1319,665 @@ export class Game {
     }
   }
 
+  /**
+   * Renders a highly immersive, interactive, procedurally animated spaceship hangar
+   * in the background of the start menu screen.
+   */
+  drawHangarBackground(ctx) {
+    const time = Date.now();
+    const shipX = this.canvas.width / 2;
+    const shipY = this.canvas.height / 2 - 35; // slightly higher to leave room for card previews
+
+    // 1. Core Hangar Metallic Walls
+    ctx.fillStyle = '#0a0a0f'; // deep obsidian/graphite base
+    ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+    
+    // Panel plates grids
+    ctx.strokeStyle = 'rgba(28, 28, 40, 0.5)';
+    ctx.lineWidth = 2;
+    const panelSize = 64;
+    for (let x = 0; x < this.canvas.width; x += panelSize) {
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, this.canvas.height);
+      ctx.stroke();
+    }
+    for (let y = 0; y < this.canvas.height; y += panelSize) {
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(this.canvas.width, y);
+      ctx.stroke();
+    }
+    
+    // Plate corner rivets
+    ctx.fillStyle = '#1c1c28';
+    for (let x = 0; x < this.canvas.width; x += panelSize) {
+      for (let y = 0; y < this.canvas.height; y += panelSize) {
+        ctx.fillRect(x - 2, y - 2, 4, 4);
+      }
+    }
+    
+    // Heavy metal column supports at left and right sides
+    ctx.fillStyle = '#131110';
+    ctx.strokeStyle = '#2a221d';
+    ctx.lineWidth = 3;
+    
+    // Left column
+    ctx.fillRect(0, 0, 50, this.canvas.height);
+    ctx.strokeRect(-5, -5, 55, this.canvas.height + 10);
+    // Right column
+    ctx.fillRect(this.canvas.width - 50, 0, 50, this.canvas.height);
+    ctx.strokeRect(this.canvas.width - 45, -5, 55, this.canvas.height + 10);
+
+    // Hazard warning stripes on column bases
+    ctx.fillStyle = '#ffaa00';
+    ctx.fillRect(0, this.canvas.height - 40, 50, 40);
+    ctx.fillRect(this.canvas.width - 50, this.canvas.height - 40, 50, 40);
+    ctx.fillStyle = '#000000';
+    for (let offset = 0; offset < 40; offset += 12) {
+      ctx.beginPath();
+      ctx.moveTo(offset, this.canvas.height - 40);
+      ctx.lineTo(offset + 6, this.canvas.height - 40);
+      ctx.lineTo(offset - 6, this.canvas.height);
+      ctx.lineTo(offset - 12, this.canvas.height);
+      ctx.closePath();
+      ctx.fill();
+      
+      const rx = this.canvas.width - 50 + offset;
+      ctx.beginPath();
+      ctx.moveTo(rx, this.canvas.height - 40);
+      ctx.lineTo(rx + 6, this.canvas.height - 40);
+      ctx.lineTo(rx - 6, this.canvas.height);
+      ctx.lineTo(rx - 12, this.canvas.height);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    // 2. Stage-Specific Background Customization
+    const stage = this.selectedMenuStage || 1;
+    
+    if (stage === 1) {
+      // Stage 1 (Neon Sky-Line) -> Glowing cyan energy conduits & computer terminal
+      ctx.save();
+      ctx.strokeStyle = 'rgba(0, 255, 255, 0.15)';
+      ctx.shadowBlur = 8;
+      ctx.shadowColor = '#00ffff';
+      ctx.lineWidth = 3;
+      
+      // Horizontal piping
+      ctx.beginPath();
+      ctx.moveTo(50, 40); ctx.lineTo(this.canvas.width - 50, 40);
+      ctx.moveTo(50, this.canvas.height - 80); ctx.lineTo(this.canvas.width - 50, this.canvas.height - 80);
+      ctx.stroke();
+      
+      // Vertical piping on left/right girders
+      ctx.beginPath();
+      ctx.moveTo(90, 0); ctx.lineTo(90, this.canvas.height);
+      ctx.moveTo(this.canvas.width - 90, 0); ctx.lineTo(this.canvas.width - 90, this.canvas.height);
+      ctx.stroke();
+      
+      // Small cyber diagnostic terminal screen in background
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = 'rgba(7, 7, 15, 0.9)';
+      ctx.strokeStyle = '#00ffff40';
+      ctx.lineWidth = 2;
+      ctx.fillRect(80, 70, 160, 50);
+      ctx.strokeRect(80, 70, 160, 50);
+      
+      // Decorative diagnostic scan grid lines
+      ctx.fillStyle = 'rgba(0, 255, 255, 0.05)';
+      for (let sy = 75; sy < 120; sy += 6) {
+        ctx.fillRect(82, sy, 156, 2);
+      }
+      
+      ctx.font = '5px "Press Start 2P"';
+      ctx.fillStyle = '#00ffff';
+      ctx.fillText("COGNITIVE CORE: ACTV", 90, 85);
+      
+      const blink = Math.sin(time * 0.005) > 0 ? "STABLE" : "      ";
+      ctx.fillStyle = '#39ff14';
+      ctx.fillText(`DRIVE FLUX: ${blink}`, 90, 97);
+      
+      ctx.fillStyle = '#ff2d55';
+      ctx.fillText("SECTOR: NEON SKY-LINE", 90, 109);
+      ctx.restore();
+      
+    } else if (stage === 2) {
+      // Stage 2 (Bio-Canopy) -> Overgrown bioluminescent moss, glowing purple spores, vines
+      ctx.save();
+      
+      // Procedural moss patches
+      ctx.fillStyle = '#08170c'; // dark organic green
+      ctx.beginPath();
+      ctx.arc(100, 60, 45, 0, Math.PI * 2);
+      ctx.arc(120, 80, 30, 0, Math.PI * 2);
+      ctx.arc(this.canvas.width - 120, 100, 50, 0, Math.PI * 2);
+      ctx.arc(this.canvas.width - 150, 80, 35, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Soft hanging vines
+      ctx.strokeStyle = '#39ff1440';
+      ctx.lineWidth = 2;
+      ctx.shadowBlur = 6;
+      ctx.shadowColor = '#39ff14';
+      
+      const vineXPositions = [70, 160, this.canvas.width - 110];
+      vineXPositions.forEach((vx, idx) => {
+        ctx.beginPath();
+        ctx.moveTo(vx, 0);
+        ctx.bezierCurveTo(vx - 25, 60, vx + 25, 120, vx, 180);
+        ctx.stroke();
+        
+        // Purple glowing bio-moss spores growing on vines
+        ctx.fillStyle = '#bd00ff';
+        ctx.shadowColor = '#bd00ff';
+        const sporePulse = 0.5 + Math.sin(time * 0.003 + idx) * 0.5;
+        ctx.globalAlpha = sporePulse * 0.8;
+        
+        for (let t = 0.15; t < 0.9; t += 0.2) {
+          const ly = 180 * t;
+          const lx = vx + Math.sin(ly * 0.04) * 12;
+          ctx.beginPath();
+          ctx.arc(lx, ly, 4 + Math.sin(t * 5) * 2, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.globalAlpha = 1.0;
+      });
+      
+      ctx.restore();
+      
+    } else if (stage === 3) {
+      // Stage 3 (Void Colossus) -> Heavy space fortress warning stripes, flashing red siren, gears
+      ctx.save();
+      
+      // Giant rotating background gear wheel
+      ctx.save();
+      ctx.translate(140, 80);
+      ctx.rotate(time * 0.0003);
+      ctx.strokeStyle = '#22201d';
+      ctx.lineWidth = 6;
+      ctx.fillStyle = '#11100e';
+      
+      ctx.beginPath();
+      ctx.arc(0, 0, 40, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      
+      // Gear teeth
+      for (let j = 0; j < Math.PI * 2; j += Math.PI / 6) {
+        ctx.save();
+        ctx.rotate(j);
+        ctx.fillRect(-8, -48, 16, 12);
+        ctx.strokeRect(-8, -48, 16, 12);
+        ctx.restore();
+      }
+      ctx.restore();
+      
+      // Red sirens blinking
+      const alarmBlink = 0.2 + Math.abs(Math.sin(time * 0.004)) * 0.8;
+      ctx.fillStyle = `rgba(255, 45, 85, ${alarmBlink * 0.08})`;
+      ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+      
+      // Physical siren dome on walls
+      ctx.fillStyle = '#ff2d55';
+      ctx.strokeStyle = '#8c4a17';
+      ctx.lineWidth = 2.5;
+      ctx.shadowBlur = 12 * alarmBlink;
+      ctx.shadowColor = '#ff2d55';
+      
+      ctx.beginPath();
+      ctx.arc(this.canvas.width - 120, 60, 10, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      
+      ctx.restore();
+    }
+
+    // 3. Glowing Docking Pad
+    ctx.save();
+    ctx.shadowBlur = 15;
+    let padColor = '#00ffff';
+    if (this.selectedMenuShip === 'aegis') padColor = '#bd00ff';
+    if (this.selectedMenuShip === 'sentinel') padColor = '#ff2d55';
+    
+    ctx.shadowColor = padColor;
+    ctx.strokeStyle = padColor;
+    ctx.lineWidth = 3.5;
+    ctx.fillStyle = 'rgba(8, 8, 14, 0.95)';
+    
+    // Large landing circle base
+    ctx.beginPath();
+    ctx.arc(shipX, shipY, 95, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    
+    // Glowing internal grid lines
+    ctx.strokeStyle = padColor + '35'; // hex low alpha
+    ctx.lineWidth = 1;
+    for (let angle = 0; angle < Math.PI * 2; angle += Math.PI / 4) {
+      ctx.beginPath();
+      ctx.moveTo(shipX, shipY);
+      ctx.lineTo(shipX + Math.cos(angle) * 95, shipY + Math.sin(angle) * 95);
+      ctx.stroke();
+    }
+    ctx.beginPath();
+    ctx.arc(shipX, shipY, 45, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(shipX, shipY, 70, 0, Math.PI * 2);
+    ctx.stroke();
+    
+    // Draw 4 industrial heavy locking clamps with caution stripes
+    ctx.fillStyle = '#221e1a';
+    ctx.strokeStyle = '#b87333';
+    ctx.lineWidth = 2.5;
+    
+    const clamps = [
+      {x: shipX - 110, y: shipY - 15, w: 25, h: 30}, // left
+      {x: shipX + 85,  y: shipY - 15, w: 25, h: 30}, // right
+      {x: shipX - 15,  y: shipY - 110, w: 30, h: 25}, // top
+      {x: shipX - 15,  y: shipY + 85, w: 30, h: 25}  // bottom
+    ];
+    
+    clamps.forEach((clamp, idx) => {
+      ctx.fillRect(clamp.x, clamp.y, clamp.w, clamp.h);
+      ctx.strokeRect(clamp.x, clamp.y, clamp.w, clamp.h);
+      
+      // Draw black and gold hazard diagonals
+      ctx.strokeStyle = '#fff01f';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      if (idx < 2) {
+        ctx.moveTo(clamp.x + 4, clamp.y + 4);
+        ctx.lineTo(clamp.x + clamp.w - 4, clamp.y + clamp.h - 4);
+      } else {
+        ctx.moveTo(clamp.x + 4, clamp.y + clamp.h - 4);
+        ctx.lineTo(clamp.x + clamp.w - 4, clamp.y + 4);
+      }
+      ctx.stroke();
+    });
+    ctx.restore();
+
+    // 4. Draw Selected Ship (Upscaled with Bobbing and Exhaust Flames)
+    const shipImg = spriteLoader.get(this.selectedMenuShip || 'vanguard');
+    if (shipImg) {
+      ctx.save();
+      ctx.imageSmoothingEnabled = false;
+      
+      const drawSize = 110;
+      const bobOffset = Math.sin(time * 0.0016) * 5; // Slow bobbing gantry hover
+      
+      ctx.translate(shipX, shipY + bobOffset);
+      
+      // Bobbing particles / exhaust glow - upscaled high-fidelity thruster flames matching Player.js
+      const flicker = 0.85 + Math.sin(time * 0.08) * 0.15 + Math.random() * 0.08;
+      let nozzles = [];
+      let colors = { outer: '#ff2d55', middle: '#ff9500', inner: '#ffffff' }; // default
+
+      if (this.selectedMenuShip === 'vanguard') {
+        nozzles = [{ x: -16.2, y: 48.5, w: 9.7, h: 32.3 }, { x: 16.2, y: 48.5, w: 9.7, h: 32.3 }];
+        colors = { outer: '#00ffff', middle: '#0088ff', inner: '#ffffff' }; // Cyan plasma
+      } else if (this.selectedMenuShip === 'aegis') {
+        nozzles = [
+          { x: -25.9, y: 42.0, w: 12.9, h: 29.1 },
+          { x: 0, y: 45.3, w: 16.2, h: 38.8 },
+          { x: 25.9, y: 42.0, w: 12.9, h: 29.1 }
+        ];
+        colors = { outer: '#bd00ff', middle: '#00ffff', inner: '#ffffff' }; // Violet / Cyan crystal shields
+      } else if (this.selectedMenuShip === 'sentinel') {
+        nozzles = [{ x: -19.4, y: 51.7, w: 8.1, h: 35.6 }, { x: 19.4, y: 51.7, w: 8.1, h: 35.6 }];
+        colors = { outer: '#ff2d55', middle: '#fff01f', inner: '#ffffff' }; // Crimson / Yellow kinetic flame
+      } else {
+        nozzles = [{ x: 0, y: 48.5, w: 12.9, h: 32.3 }];
+      }
+
+      nozzles.forEach(nozzle => {
+        ctx.save();
+        ctx.translate(nozzle.x, nozzle.y);
+        
+        const nw = nozzle.w * flicker;
+        const nh = nozzle.h * flicker;
+        
+        ctx.shadowBlur = 12;
+        ctx.shadowColor = colors.outer;
+        
+        // Outer flame (largest)
+        ctx.fillStyle = colors.outer;
+        ctx.beginPath();
+        ctx.moveTo(-nw, 0);
+        ctx.lineTo(nw, 0);
+        ctx.lineTo(0, nh);
+        ctx.closePath();
+        ctx.fill();
+        
+        ctx.shadowBlur = 0; // Turn off shadow blur for inner layers
+        
+        // Middle flame
+        ctx.fillStyle = colors.middle;
+        ctx.beginPath();
+        ctx.moveTo(-nw * 0.6, 0);
+        ctx.lineTo(nw * 0.6, 0);
+        ctx.lineTo(0, nh * 0.65);
+        ctx.closePath();
+        ctx.fill();
+        
+        // Inner core (hottest, white)
+        ctx.fillStyle = colors.inner;
+        ctx.beginPath();
+        ctx.moveTo(-nw * 0.3, 0);
+        ctx.lineTo(nw * 0.3, 0);
+        ctx.lineTo(0, nh * 0.35);
+        ctx.closePath();
+        ctx.fill();
+        
+        ctx.restore();
+      });
+      
+      ctx.shadowBlur = 0;
+      
+      // Draw upscaled starship sprite
+      ctx.drawImage(shipImg, -drawSize / 2, -drawSize / 2, drawSize, drawSize);
+      
+      // Ship-specific overlays:
+      // Vanguard: Cyber neon wing tubes pulsing
+      if (this.selectedMenuShip === 'vanguard') {
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = '#00ffff';
+        ctx.fillStyle = '#00ffff';
+        ctx.globalAlpha = 0.5 + Math.sin(time * 0.006) * 0.5;
+        // left wing neon bar
+        ctx.fillRect(-38, -6, 3, 16);
+        // right wing neon bar
+        ctx.fillRect(35, -6, 3, 16);
+        ctx.globalAlpha = 1.0;
+      }
+      
+      // Aegis: Circular rotating shields
+      if (this.selectedMenuShip === 'aegis') {
+        ctx.strokeStyle = 'rgba(189, 0, 255, 0.4)';
+        ctx.lineWidth = 2.5;
+        ctx.shadowBlur = 8;
+        ctx.shadowColor = '#bd00ff';
+        
+        ctx.beginPath();
+        ctx.arc(0, 0, 75, 0, Math.PI * 2);
+        ctx.stroke();
+        
+        // Rotating crystals on the shield ring
+        const shieldRot = time * 0.0012;
+        ctx.fillStyle = '#ffffff';
+        const cx1 = Math.cos(shieldRot) * 75;
+        const cy1 = Math.sin(shieldRot) * 75;
+        ctx.beginPath();
+        ctx.arc(cx1, cy1, 4.5, 0, Math.PI * 2);
+        ctx.fill();
+        
+        const cx2 = Math.cos(shieldRot + Math.PI) * 75;
+        const cy2 = Math.sin(shieldRot + Math.PI) * 75;
+        ctx.beginPath();
+        ctx.arc(cx2, cy2, 4.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      
+      // Sentinel: Bobbing wing drones
+      if (this.selectedMenuShip === 'sentinel') {
+        ctx.shadowBlur = 8;
+        ctx.shadowColor = '#ff2d55';
+        ctx.fillStyle = '#ff2d55';
+        
+        const dbob1 = Math.sin(time * 0.0022) * 5;
+        const dbob2 = Math.cos(time * 0.0018) * 5;
+        
+        // Left drone
+        ctx.fillRect(-68, -16 + dbob1, 7, 7);
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(-66, -14 + dbob1, 3, 3);
+        
+        // Right drone
+        ctx.fillStyle = '#ff2d55';
+        ctx.fillRect(61, -16 + dbob2, 7, 7);
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(63, -14 + dbob2, 3, 3);
+      }
+      
+      ctx.restore();
+    }
+
+    // 5. articulated Procedural Robotic Maintenance Arms & Welding Lasers
+    const lax = 70;
+    const lay = 100;
+    const rax = this.canvas.width - 70;
+    const ray = 120;
+    const armLen = 70;
+    
+    // Slow bending angles based on sin/cos
+    const lAngle1 = Math.PI / 6 + Math.sin(time * 0.0006) * 0.15;
+    const lAngle2 = Math.PI / 4 + Math.cos(time * 0.0008) * 0.2;
+    
+    // Left Arm Joints
+    const lj1x = lax + Math.cos(lAngle1) * armLen;
+    const lj1y = lay + Math.sin(lAngle1) * armLen;
+    const lhandx = lj1x + Math.cos(lAngle1 + lAngle2) * (armLen * 0.8);
+    const lhandy = lj1y + Math.sin(lAngle1 + lAngle2) * (armLen * 0.8);
+    
+    // Draw Left Arm (segmented copper pipeline style)
+    ctx.save();
+    ctx.lineWidth = 5.5;
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = '#8c4a17'; // copper outline
+    ctx.fillStyle = '#cd7f32'; // brass fill
+    
+    // Base gantry plate
+    ctx.fillStyle = '#1c1a18';
+    ctx.fillRect(lax - 15, lay - 10, 20, 20);
+    ctx.strokeRect(lax - 15, lay - 10, 20, 20);
+    
+    // Draw links
+    ctx.beginPath();
+    ctx.moveTo(lax, lay);
+    ctx.lineTo(lj1x, lj1y);
+    ctx.lineTo(lhandx, lhandy);
+    ctx.stroke();
+    
+    // Articulated joint gears
+    ctx.fillStyle = '#b87333';
+    ctx.beginPath();
+    ctx.arc(lax, lay, 7, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(lj1x, lj1y, 5.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    
+    // Tool nozzle
+    ctx.fillStyle = '#cd7f32';
+    ctx.fillRect(lhandx - 4, lhandy - 4, 8, 8);
+    ctx.restore();
+
+    // Right Arm Joints
+    const rAngle1 = Math.PI - Math.PI / 6 + Math.sin(time * 0.0005) * 0.15;
+    const rAngle2 = -Math.PI / 4 + Math.cos(time * 0.0007) * 0.2;
+    
+    const rj1x = rax + Math.cos(rAngle1) * armLen;
+    const rj1y = ray + Math.sin(rAngle1) * armLen;
+    const rhandx = rj1x + Math.cos(rAngle1 + rAngle2) * (armLen * 0.8);
+    const rhandy = rj1y + Math.sin(rAngle1 + rAngle2) * (armLen * 0.8);
+    
+    // Draw Right Arm
+    ctx.save();
+    ctx.lineWidth = 5.5;
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = '#8c4a17';
+    ctx.fillStyle = '#cd7f32';
+    
+    // Base plate
+    ctx.fillStyle = '#1c1a18';
+    ctx.fillRect(rax - 5, ray - 10, 20, 20);
+    ctx.strokeRect(rax - 5, ray - 10, 20, 20);
+    
+    // Links
+    ctx.beginPath();
+    ctx.moveTo(rax, ray);
+    ctx.lineTo(rj1x, rj1y);
+    ctx.lineTo(rhandx, rhandy);
+    ctx.stroke();
+    
+    // Gears
+    ctx.fillStyle = '#b87333';
+    ctx.beginPath();
+    ctx.arc(rax, ray, 7, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(rj1x, rj1y, 5.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    
+    // Tool
+    ctx.fillStyle = '#cd7f32';
+    ctx.fillRect(rhandx - 4, rhandy - 4, 8, 8);
+    ctx.restore();
+
+    // Lazy initialize particles and sparks
+    if (!this.hangarParticles) {
+      this.hangarParticles = [];
+    }
+
+    // Trigger random welding arcs and emit physics sparks
+    if (Math.random() < 0.012) {
+      // Weld Left Wing!
+      const targetX = shipX - 30 + (Math.random() - 0.5) * 10;
+      const targetY = shipY + (Math.random() - 0.5) * 15;
+      
+      ctx.save();
+      ctx.strokeStyle = '#00ffff';
+      ctx.lineWidth = 2.5;
+      ctx.shadowBlur = 10;
+      ctx.shadowColor = '#00ffff';
+      
+      // Draw high-voltage zig-zag welding laser arc
+      ctx.beginPath();
+      ctx.moveTo(lhandx, lhandy);
+      const mx = (lhandx + targetX) / 2 + (Math.random() - 0.5) * 12;
+      const my = (lhandy + targetY) / 2 + (Math.random() - 0.5) * 12;
+      ctx.lineTo(mx, my);
+      ctx.lineTo(targetX, targetY);
+      ctx.stroke();
+      ctx.restore();
+      
+      // Spawn exploding sparks
+      for (let j = 0; j < 8; j++) {
+        this.hangarParticles.push({
+          type: 'spark',
+          x: targetX,
+          y: targetY,
+          vx: (Math.random() - 0.5) * 3,
+          vy: -1.2 - Math.random() * 2,
+          size: 2.2 + Math.random() * 2,
+          alpha: 1.0,
+          color: '#fff01f'
+        });
+      }
+    }
+    
+    if (Math.random() < 0.012) {
+      // Weld Right Wing!
+      const targetX = shipX + 30 + (Math.random() - 0.5) * 10;
+      const targetY = shipY + (Math.random() - 0.5) * 15;
+      
+      ctx.save();
+      ctx.strokeStyle = '#00ffff';
+      ctx.lineWidth = 2.5;
+      ctx.shadowBlur = 10;
+      ctx.shadowColor = '#00ffff';
+      
+      ctx.beginPath();
+      ctx.moveTo(rhandx, rhandy);
+      const mx = (rhandx + targetX) / 2 + (Math.random() - 0.5) * 12;
+      const my = (rhandy + targetY) / 2 + (Math.random() - 0.5) * 12;
+      ctx.lineTo(mx, my);
+      ctx.lineTo(targetX, targetY);
+      ctx.stroke();
+      ctx.restore();
+      
+      for (let j = 0; j < 8; j++) {
+        this.hangarParticles.push({
+          type: 'spark',
+          x: targetX,
+          y: targetY,
+          vx: (Math.random() - 0.5) * 3,
+          vy: -1.2 - Math.random() * 2,
+          size: 2.2 + Math.random() * 2,
+          alpha: 1.0,
+          color: '#fff01f'
+        });
+      }
+    }
+
+    // 6. Spawn Steam & Smoke Vents at the floor grates
+    if (Math.random() < 0.06) {
+      const ventX = Math.random() > 0.5 ? 90 + Math.random() * 60 : this.canvas.width - 150 + Math.random() * 60;
+      this.hangarParticles.push({
+        type: 'steam',
+        x: ventX,
+        y: this.canvas.height - 15,
+        vx: (Math.random() - 0.5) * 0.25,
+        vy: -0.5 - Math.random() * 0.7,
+        size: 8 + Math.random() * 8,
+        maxSize: 36 + Math.random() * 16,
+        alpha: 0.15 + Math.random() * 0.1,
+        color: stage === 2 ? 'rgba(57, 255, 20, 0.08)' : 'rgba(255, 255, 255, 0.1)'
+      });
+    }
+
+    // 7. Update Hangar Particles (Physics + Gravity)
+    for (let i = this.hangarParticles.length - 1; i >= 0; i--) {
+      const p = this.hangarParticles[i];
+      p.x += p.vx;
+      p.y += p.vy;
+      
+      if (p.type === 'steam') {
+        p.size += 0.22;
+        p.alpha -= 0.0018;
+        if (p.alpha <= 0 || p.size >= p.maxSize) {
+          this.hangarParticles.splice(i, 1);
+          continue;
+        }
+      } else if (p.type === 'spark') {
+        p.vy += 0.07; // Gravity pulls sparks down!
+        p.size *= 0.95;
+        p.alpha -= 0.018;
+        if (p.alpha <= 0 || p.size < 0.5) {
+          this.hangarParticles.splice(i, 1);
+          continue;
+        }
+      }
+      
+      // Draw particles
+      ctx.save();
+      ctx.globalAlpha = p.alpha;
+      ctx.fillStyle = p.color;
+      if (p.type === 'steam') {
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (p.type === 'spark') {
+        ctx.shadowBlur = 6;
+        ctx.shadowColor = p.color;
+        ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
+      }
+      ctx.restore();
+    }
+  }
+
   draw() {
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+    if (!this.isPlaying) {
+      this.drawHangarBackground(this.ctx);
+      return;
+    }
 
     // Render Stage-specific background
     this.drawBackground(this.ctx);

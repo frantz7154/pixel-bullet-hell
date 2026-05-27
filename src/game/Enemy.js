@@ -157,9 +157,8 @@ export class Enemy {
     const time = Date.now();
     
     if (this.type === 'drone') {
-      // 1. Drone AI: Fly straight down with a gentle wave oscillation (no player-chasing!)
+      // 1. Drone AI: Fly straight down with a stable linear path (no swaying or player-chasing!)
       this.y += this.speed;
-      this.x += Math.sin(elapsed * 0.003) * 0.8;
       
       // Drone shoot direct single shots
       if (time - this.lastShootTime > this.shootDelay && this.y > 0) {
@@ -174,9 +173,9 @@ export class Enemy {
       }
       
     } else if (this.type === 'spinner') {
-      // 2. Spinner AI: Sweep left/right oscillating downward
+      // 2. Spinner AI: Sweep left/right with a constant linear vertical drift (no swaying)
       this.x += this.spinnerDir * this.speed;
-      this.y += Math.sin(elapsed * 0.002) * 0.6 + 0.3; // drift down gently
+      this.y += 0.45; // stable linear downward drift
       
       // Bounce boundaries horizontally (based on 854 virtual width)
       if (this.x < 30) { this.x = 30; this.spinnerDir = 1; }
@@ -199,13 +198,11 @@ export class Enemy {
       }
       
     } else if (this.type === 'sniper') {
-      // 3. Sniper AI: Position itself, lock, and fire rail bullet
+      // 3. Sniper AI: Position itself on a straight vertical trajectory, lock, and fire rail bullet
       if (!this.isChargingLaser) {
-        // Drift slowly downward until reaching 30% screen height (144px)
+        // Drift slowly downward on a stable vector until reaching 30% screen height (144px)
         if (this.y < 480 * 0.3) {
           this.y += this.speed;
-          // drift horizontally slightly
-          this.x += Math.sin(elapsed * 0.001) * 0.5;
         }
         
         // Start charging laser lock
@@ -240,7 +237,7 @@ export class Enemy {
       
       // Phase Transitions based on remaining HP percentages
       const hpPct = this.hp / this.maxHp;
-      if (hpPct > 0.65) {
+      if (hpPct > 0.7) {
         this.bossPhase = 1;
       } else if (hpPct > 0.3) {
         if (this.bossPhase === 1) {
@@ -267,66 +264,66 @@ export class Enemy {
     if (this.type === 'boss2') {
       // BOSS 2: CYBER COGNITION
       if (this.bossPhase === 1) {
-        if (time - this.lastShootTime > this.shootDelay) {
+        // Spacious double-helix streams (slower frequency, larger gaps)
+        if (time - this.lastShootTime > this.shootDelay * 2.2) {
           this.lastShootTime = time;
           audioSystem.playLaserEnemy();
-          // Dual double-helix sine wave bullet lines fired downwards (isWave: true)
-          bullets.push(new Bullet(this.x - 30, this.y + 20, Math.PI / 2, 5.0, 8, false, {
+          bullets.push(new Bullet(this.x - 30, this.y + 20, Math.PI / 2, 4.5, 8, false, {
             isWave: true,
-            waveAmplitude: 30,
-            waveFrequency: 0.12,
+            waveAmplitude: 25,
+            waveFrequency: 0.08,
             color: '#bd00ff',
             radius: 4
           }));
-          bullets.push(new Bullet(this.x + 30, this.y + 20, Math.PI / 2, 5.0, 8, false, {
+          bullets.push(new Bullet(this.x + 30, this.y + 20, Math.PI / 2, 4.5, 8, false, {
             isWave: true,
-            waveAmplitude: -30,
-            waveFrequency: 0.12,
+            waveAmplitude: -25,
+            waveFrequency: 0.08,
             color: '#00ffff',
             radius: 4
           }));
         }
       } else if (this.bossPhase === 2) {
-        if (time - this.lastShootTime > this.shootDelay * 0.8) {
+        // Cross Fire Grid: Slower rotation and a wider delay (450ms) to allow comfortable quadrant changes
+        if (time - this.lastShootTime > this.shootDelay * 2.2) {
           this.lastShootTime = time;
           audioSystem.playLaserEnemy();
-          // Cross Fire Grid: Rotating continuous cross-beams blocking quadrants
-          this.bossAngle += 0.12;
+          this.bossAngle += 0.06;
           for (let i = 0; i < 4; i++) {
             const angle = this.bossAngle + (i * Math.PI / 2);
-            bullets.push(new Bullet(this.x, this.y + 20, angle, 4.8, 8, false, {
+            bullets.push(new Bullet(this.x, this.y + 20, angle, 4.0, 8, false, {
               color: '#bd00ff',
               radius: 4
             }));
           }
-          if (Math.random() < 0.25) {
-            bullets.push(new Bullet(this.x, this.y + 20, Math.PI / 2, 6, 12, false, {
+          if (Math.random() < 0.15) {
+            bullets.push(new Bullet(this.x, this.y + 20, Math.PI / 2, 5.0, 12, false, {
               isWave: true,
-              waveAmplitude: 40,
-              waveFrequency: 0.15,
+              waveAmplitude: 35,
+              waveFrequency: 0.1,
               color: '#00ffff',
               radius: 4.5
             }));
           }
         }
       } else if (this.bossPhase === 3) {
-        if (time - this.lastShootTime > this.shootDelay * 0.6) {
+        // Laser Maze: Spaced-out 6-direction geometric starburst spirals & slow railguns
+        if (time - this.lastShootTime > this.shootDelay * 2.8) {
           this.lastShootTime = time;
           audioSystem.playLaserEnemy();
-          // Laser Maze: Pulsing 8-direction geometric starburst spirals & rapid targeted railgun
-          this.bossAngle += 0.20;
-          const ringCount = 8;
+          this.bossAngle += 0.15;
+          const ringCount = 6; // reduced from 8 for bigger dodge lanes
           for (let i = 0; i < ringCount; i++) {
             const angle = this.bossAngle + (i * Math.PI * 2 / ringCount);
-            bullets.push(new Bullet(this.x, this.y + 20, angle, 5.2, 8, false, {
+            bullets.push(new Bullet(this.x, this.y + 20, angle, 4.5, 8, false, {
               color: '#bd00ff',
               radius: 4
             }));
           }
-          if (Math.random() < 0.35) {
+          if (Math.random() < 0.18) {
             audioSystem.playLaserHeavy();
             const targetAngle = Math.atan2(player.y - this.y, player.x - this.x);
-            bullets.push(new Bullet(this.x, this.y + 20, targetAngle, 18, 25, false, {
+            bullets.push(new Bullet(this.x, this.y + 20, targetAngle, 14, 25, false, {
               color: '#00ffff',
               radius: 5,
               isLaser: true,
@@ -338,70 +335,70 @@ export class Enemy {
     } else if (this.type === 'boss3') {
       // BOSS 3: VOID SINGULARITY CORRUPTOR
       if (this.bossPhase === 1) {
-        if (time - this.lastShootTime > this.shootDelay) {
+        // Gravity Spits: Spaced concentric 8-bullet rings (reduced from 16) with large gaps
+        if (time - this.lastShootTime > this.shootDelay * 6.5) {
           this.lastShootTime = time;
           audioSystem.playLaserEnemy();
-          // Gravity Spits: Dense concentric 16-bullet rings with delayed curves
-          const ringCount = 16;
-          const baseSpeed = 3.5 + Math.sin(time * 0.002) * 1.5;
+          const ringCount = 8;
           for (let i = 0; i < ringCount; i++) {
-            const angle = (i * Math.PI * 2 / ringCount) + (Math.sin(time * 0.001) * 0.2);
-            bullets.push(new Bullet(this.x, this.y + 20, angle, baseSpeed, 8, false, {
+            const angle = (i * Math.PI * 2 / ringCount) + (Math.sin(time * 0.001) * 0.1);
+            bullets.push(new Bullet(this.x, this.y + 20, angle, 3.5, 8, false, {
               color: '#ffaa00',
               radius: 4
             }));
           }
         }
       } else if (this.bossPhase === 2) {
-        if (time - this.lastShootTime > this.shootDelay * 0.8) {
+        // Event Horizon: Slow drifting 6-bullet curtain (reduced from 10) & slow homing zaps
+        if (time - this.lastShootTime > this.shootDelay * 5.5) {
           this.lastShootTime = time;
           audioSystem.playLaserEnemy();
-          // Event Horizon: Slow drifting purple bullet curtain & fast weaving homing rocket zaps
-          const curtainCount = 10;
-          this.bossAngle += 0.08;
+          const curtainCount = 6;
+          this.bossAngle += 0.05;
           for (let i = 0; i < curtainCount; i++) {
             const angle = this.bossAngle + (i * Math.PI * 2 / curtainCount);
-            bullets.push(new Bullet(this.x, this.y + 20, angle, 2.5, 8, false, {
+            bullets.push(new Bullet(this.x, this.y + 20, angle, 2.2, 8, false, {
               color: '#bd00ff',
               radius: 4
             }));
           }
-          if (Math.random() < 0.4) {
+          if (Math.random() < 0.15) {
             audioSystem.playLaserHeavy();
             const targetAngle = Math.atan2(player.y - this.y, player.x - this.x);
-            bullets.push(new Bullet(this.x, this.y + 20, targetAngle, 4.0, 15, false, {
+            bullets.push(new Bullet(this.x, this.y + 20, targetAngle, 3.2, 15, false, {
               isHoming: true,
-              homingTurnSpeed: 0.05,
+              homingTurnSpeed: 0.03, // much slower turn speed to allow outmaneuvering
               color: '#fff01f',
               radius: 6
             }));
           }
         }
       } else if (this.bossPhase === 3) {
-        if (time - this.lastShootTime > this.shootDelay * 0.6) {
+        // Singularity Storm: 10-stream spirals & slow diagonal railgun warning lasers
+        if (time - this.lastShootTime > this.shootDelay * 6.0) {
           this.lastShootTime = time;
           audioSystem.playLaserEnemy();
-          // Singularity Storm: Hyper-aggressive 12-stream rotating firestorm spirals & diagonal railgun lasers
-          this.bossAngle += 0.35;
-          const ringCount = 12;
+          this.bossAngle += 0.20;
+          const ringCount = 10;
           for (let i = 0; i < ringCount; i++) {
             const angle = this.bossAngle + (i * Math.PI * 2 / ringCount);
-            bullets.push(new Bullet(this.x, this.y + 20, angle, 6.0, 8, false, {
+            bullets.push(new Bullet(this.x, this.y + 20, angle, 5.0, 8, false, {
               color: '#ffaa00',
               radius: 4
             }));
           }
-          if (Math.random() < 0.35) {
+          if (Math.random() < 0.18) {
             audioSystem.playLaserHeavy();
-            const leftAngle = Math.PI / 4 + Math.random() * 0.1;
-            const rightAngle = 3 * Math.PI / 4 + Math.random() * 0.1;
-            bullets.push(new Bullet(this.x - 40, this.y + 20, leftAngle, 18, 30, false, {
+            // Fire diagonal warning railguns that leave a completely safe central dodge corridor!
+            const leftAngle = Math.PI / 3;
+            const rightAngle = 2 * Math.PI / 3;
+            bullets.push(new Bullet(this.x - 45, this.y + 20, leftAngle, 15, 30, false, {
               color: '#ff2d55',
               radius: 6,
               isLaser: true,
               laserLength: 800
             }));
-            bullets.push(new Bullet(this.x + 40, this.y + 20, rightAngle, 18, 30, false, {
+            bullets.push(new Bullet(this.x + 45, this.y + 20, rightAngle, 15, 30, false, {
               color: '#ff2d55',
               radius: 6,
               isLaser: true,
@@ -413,44 +410,44 @@ export class Enemy {
     } else {
       // BOSS 1 (Void Ravager) or Default
       if (this.bossPhase === 1) {
-        if (time - this.lastShootTime > this.shootDelay) {
+        // Dual sweeping vertical plasma streams - wider spacing, slower shoot delay (350ms)
+        if (time - this.lastShootTime > this.shootDelay * 1.6) {
           this.lastShootTime = time;
           audioSystem.playLaserEnemy();
-          // Dual-sweeping direct vertical plasma streams
-          const sweep = Math.sin(time * 0.003) * 35;
-          bullets.push(new Bullet(this.x - 25 + sweep, this.y + 20, Math.PI / 2, 5.5, 8, false, {
+          const sweep = Math.sin(time * 0.002) * 55;
+          bullets.push(new Bullet(this.x - 30 + sweep, this.y + 20, Math.PI / 2, 5.0, 8, false, {
             color: '#00ffff',
             radius: 4
           }));
-          bullets.push(new Bullet(this.x + 25 + sweep, this.y + 20, Math.PI / 2, 5.5, 8, false, {
+          bullets.push(new Bullet(this.x + 30 + sweep, this.y + 20, Math.PI / 2, 5.0, 8, false, {
             color: '#00ffff',
             radius: 4
           }));
         }
       } else if (this.bossPhase === 2) {
-        if (time - this.lastShootTime > this.shootDelay * 0.8) {
+        // 3-directional (instead of 5) targeted spreads with wide dodge lanes
+        if (time - this.lastShootTime > this.shootDelay * 4.0) {
           this.lastShootTime = time;
           audioSystem.playLaserEnemy();
-          // 5-directional targeted shotgun bullet spreads
           const targetAngle = Math.atan2(player.y - this.y, player.x - this.x);
-          for (let i = -2; i <= 2; i++) {
-            bullets.push(new Bullet(this.x, this.y + 20, targetAngle + i * 0.15, 6, 8, false, {
+          for (let i = -1; i <= 1; i++) {
+            bullets.push(new Bullet(this.x, this.y + 20, targetAngle + i * 0.22, 5.2, 8, false, {
               color: '#00ffff',
               radius: 4
             }));
           }
         }
       } else if (this.bossPhase === 3) {
-        if (time - this.lastShootTime > this.shootDelay * 0.6) {
+        // Curtain Storm: Alternating 8-bullet rotating arrays (reduced from 10) with 900ms delay
+        if (time - this.lastShootTime > this.shootDelay * 4.2) {
           this.lastShootTime = time;
           audioSystem.playLaserEnemy();
-          // Curtain Storm: Alternating clockwise/counter-clockwise 10-bullet rotating ring arrays
-          this.bossAngle += 0.22;
+          this.bossAngle += 0.15;
           const dir = Math.floor(time / 2000) % 2 === 0 ? 1 : -1;
-          const ringCount = 10;
+          const ringCount = 8;
           for (let i = 0; i < ringCount; i++) {
             const angle = (dir * this.bossAngle) + (i * Math.PI * 2 / ringCount);
-            bullets.push(new Bullet(this.x, this.y + 20, angle, 4.5, 8, false, {
+            bullets.push(new Bullet(this.x, this.y + 20, angle, 4.0, 8, false, {
               color: '#00ffff',
               radius: 4
             }));
@@ -793,12 +790,12 @@ export class PowerUp {
   constructor(x, y, type = 'P') {
     this.x = x;
     this.y = y;
-    this.type = type; // 'P', 'B', 'H'
+    this.type = type; // 'P' (Firepower), 'B' (Bomb), 'H' (Heal), 'S' (Super Charge)
     this.radius = 10;
     this.isDead = false;
     
     // Cyber colors
-    this.color = type === 'P' ? '#ff2d55' : (type === 'B' ? '#fff01f' : '#00ffff');
+    this.color = type === 'P' ? '#ff2d55' : (type === 'B' ? '#fff01f' : (type === 'S' ? '#bd00ff' : '#00ffff'));
   }
 
   update() {

@@ -64,6 +64,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const game = new Game(canvas);
   
+  // Initialize selected ship and stage on the game object with safe literal defaults for dynamic hangar rendering
+  game.selectedMenuShip = 'vanguard';
+  game.selectedMenuStage = 1;
+  
   // Set fixed virtual 16:9 widescreen retro resolution (upscaled via CSS for big, chunky pixel detail!)
   function resizeCanvas() {
     canvas.width = 854;
@@ -214,26 +218,140 @@ document.addEventListener('DOMContentLoaded', () => {
   const keys = {};
   let selectedShip = 'vanguard';
   let selectedStage = 1;
+  
+  const SHIPS = ['vanguard', 'aegis', 'sentinel'];
+  let shipIndex = 0;
+  let activeMenuScreen = 'main'; // 'main', 'shipselect', 'options'
+
+  // Sub-states Binds
+  const mainMenuSub = document.getElementById('mainMenuSub');
+  const shipSelectSub = document.getElementById('shipSelectSub');
+  const optionsSub = document.getElementById('optionsSub');
+  const startScreen = document.getElementById('startScreen');
+
+  // Starship profiles statistics
+  const SHIP_DETAILS = {
+    vanguard: {
+      name: 'VANGUARD',
+      class: 'STRIKER CLASS',
+      desc: 'High velocity, front-firing tactical plasma beam.',
+      stats: { spd: 80, atk: 90, def: 40 },
+      color: '#00ffff'
+    },
+    aegis: {
+      name: 'AEGIS',
+      class: 'BULWARK CLASS',
+      desc: 'Heavy armor. Generates an orbital energy shield that defuses bullets.',
+      stats: { spd: 40, atk: 50, def: 100 },
+      color: '#bd00ff'
+    },
+    sentinel: {
+      name: 'SENTINEL',
+      class: 'QUANTUM CLASS',
+      desc: 'Agile fighter. Commands autonomous auto-targeting lightning sub-drones.',
+      stats: { spd: 90, atk: 60, def: 60 },
+      color: '#ff2d55'
+    }
+  };
+
+  // UI state manager
+  function setMenuScreen(screen) {
+    activeMenuScreen = screen;
+    mainMenuSub.classList.add('hidden');
+    shipSelectSub.classList.add('hidden');
+    optionsSub.classList.add('hidden');
+
+    if (screen === 'main') {
+      mainMenuSub.classList.remove('hidden');
+      menuRow = 0; // Focus LAUNCH MISSION
+    } else if (screen === 'shipselect') {
+      shipSelectSub.classList.remove('hidden');
+      updateShipSelectUI();
+      menuRow = 0; // Focus LAUNCH STARSHIP
+    } else if (screen === 'options') {
+      optionsSub.classList.remove('hidden');
+      menuRow = 0; // Focus Master volume slider
+    }
+    updateMenuFocus();
+  }
+
+  // Dynamic details progress bars
+  function updateShipSelectUI() {
+    const details = SHIP_DETAILS[selectedShip];
+    if (!details) return;
+
+    const detailsName = document.getElementById('detailsName');
+    detailsName.innerText = details.name;
+    detailsName.style.color = details.color;
+    detailsName.style.textShadow = `0 0 10px ${details.color}`;
+    
+    document.getElementById('detailsClass').innerText = details.class;
+    document.getElementById('detailsDesc').innerText = details.desc;
+    
+    const barSPD = document.getElementById('barSPD');
+    barSPD.style.width = `${details.stats.spd}%`;
+    barSPD.style.background = details.color;
+    barSPD.style.boxShadow = `0 0 8px ${details.color}`;
+
+    const barATK = document.getElementById('barATK');
+    barATK.style.width = `${details.stats.atk}%`;
+    barATK.style.background = details.color;
+    barATK.style.boxShadow = `0 0 8px ${details.color}`;
+
+    const barDEF = document.getElementById('barDEF');
+    barDEF.style.width = `${details.stats.def}%`;
+    barDEF.style.background = details.color;
+    barDEF.style.boxShadow = `0 0 8px ${details.color}`;
+  }
+
+  // starship rotator
+  function rotateShip(dir) {
+    if (dir === 'left') {
+      shipIndex = (shipIndex - 1 + SHIPS.length) % SHIPS.length;
+    } else {
+      shipIndex = (shipIndex + 1) % SHIPS.length;
+    }
+    selectedShip = SHIPS[shipIndex];
+    game.selectedMenuShip = selectedShip;
+    updateShipSelectUI();
+    audioSystem.init();
+    audioSystem.playLaser();
+  }
 
   // --- Keyboard-Driven Menu Navigation State ---
   let menuRow = 0;
-  let menuCol = 0;
 
-  const shipNodes = Array.from(document.querySelectorAll('.ship-card'));
-  const stageNodes = Array.from(document.querySelectorAll('.stage-card'));
-  const launchBtn = document.getElementById('btnStart');
+  const btnGoToShipSelect = document.getElementById('btnGoToShipSelect');
+  const btnGoToOptions = document.getElementById('btnGoToOptions');
+  const btnPrevShip = document.getElementById('btnPrevShip');
+  const btnNextShip = document.getElementById('btnNextShip');
+  const btnBackToMenu = document.getElementById('btnBackToMenu');
+  const btnLaunchShip = document.getElementById('btnLaunchShip');
+  const btnOptionsBack = document.getElementById('btnOptionsBack');
 
   function updateMenuFocus() {
-    shipNodes.forEach(n => n.classList.remove('focused'));
-    stageNodes.forEach(n => n.classList.remove('focused'));
-    if (launchBtn) launchBtn.classList.remove('focused');
+    // Clear all outlines
+    [btnGoToShipSelect, btnGoToOptions, btnPrevShip, btnNextShip, btnBackToMenu, btnLaunchShip, btnOptionsBack].forEach(b => {
+      if (b) b.classList.remove('focused');
+    });
+    
+    // Sliders focus clear
+    const sliders = [sliderMaster, sliderMusic, sliderSFX];
+    sliders.forEach(s => {
+      if (s) s.parentElement.classList.remove('focused-group');
+    });
 
-    if (menuRow === 0) {
-      if (shipNodes[menuCol]) shipNodes[menuCol].classList.add('focused');
-    } else if (menuRow === 1) {
-      if (stageNodes[menuCol]) stageNodes[menuCol].classList.add('focused');
-    } else if (menuRow === 2) {
-      if (launchBtn) launchBtn.classList.add('focused');
+    if (activeMenuScreen === 'main') {
+      if (menuRow === 0) btnGoToShipSelect.classList.add('focused');
+      else if (menuRow === 1) btnGoToOptions.classList.add('focused');
+    } else if (activeMenuScreen === 'shipselect') {
+      if (menuRow === 0) btnLaunchShip.classList.add('focused');
+      else if (menuRow === 1) btnBackToMenu.classList.add('focused');
+    } else if (activeMenuScreen === 'options') {
+      if (menuRow === 0) sliderMaster.parentElement.classList.add('focused-group');
+      else if (menuRow === 1) sliderMusic.parentElement.classList.add('focused-group');
+      else if (menuRow === 2) sliderSFX.parentElement.classList.add('focused-group');
+      else if (menuRow === 3) btnOptionsBack.classList.add('focused');
     }
   }
 
@@ -259,55 +377,64 @@ document.addEventListener('DOMContentLoaded', () => {
       if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', ' ', 'enter', 'w', 'a', 's', 'd'].includes(k)) {
         e.preventDefault();
       }
-
+ 
       let changed = false;
-
-      if (k === 'w' || k === 'arrowup') {
-        if (menuRow > 0) {
-          menuRow--;
-          changed = true;
-        }
-      } else if (k === 's' || k === 'arrowdown') {
-        if (menuRow < 2) {
-          menuRow++;
-          changed = true;
-        }
-      } else if (k === 'a' || k === 'arrowleft') {
-        if (menuRow < 2 && menuCol > 0) {
-          menuCol--;
-          changed = true;
-        }
-      } else if (k === 'd' || k === 'arrowright') {
-        if (menuRow < 2 && menuCol < 2) {
-          menuCol++;
-          changed = true;
-        }
-      } else if (k === ' ' || k === 'enter') {
-        if (menuRow === 0) {
-          shipNodes.forEach(c => c.classList.remove('active'));
-          const activeCard = shipNodes[menuCol];
-          if (activeCard) {
-            activeCard.classList.add('active');
-            selectedShip = activeCard.dataset.ship;
-            audioSystem.init();
-            audioSystem.playLaser();
+ 
+      if (activeMenuScreen === 'main') {
+        if (k === 'w' || k === 'arrowup') {
+          if (menuRow > 0) { menuRow--; changed = true; }
+        } else if (k === 's' || k === 'arrowdown') {
+          if (menuRow < 1) { menuRow++; changed = true; }
+        } else if (k === ' ' || k === 'enter') {
+          audioSystem.init();
+          audioSystem.playShieldHit();
+          if (menuRow === 0) {
+            setMenuScreen('shipselect');
+          } else if (menuRow === 1) {
+            setMenuScreen('options');
           }
-        } else if (menuRow === 1) {
-          stageNodes.forEach(c => c.classList.remove('active'));
-          const activeCard = stageNodes[menuCol];
-          if (activeCard) {
-            activeCard.classList.add('active');
-            selectedStage = parseInt(activeCard.dataset.stage);
+        }
+      } else if (activeMenuScreen === 'shipselect') {
+        if (k === 'a' || k === 'arrowleft') {
+          rotateShip('left');
+        } else if (k === 'd' || k === 'arrowright') {
+          rotateShip('right');
+        } else if (k === 'w' || k === 'arrowup') {
+          if (menuRow > 0) { menuRow--; changed = true; }
+        } else if (k === 's' || k === 'arrowdown') {
+          if (menuRow < 1) { menuRow++; changed = true; }
+        } else if (k === ' ' || k === 'enter') {
+          audioSystem.init();
+          audioSystem.playShieldHit();
+          if (menuRow === 0) {
+            startScreen.classList.add('hidden');
+            game.start(selectedShip, 1); // Start Stage 1 immediately
+          } else if (menuRow === 1) {
+            setMenuScreen('main');
+          }
+        }
+      } else if (activeMenuScreen === 'options') {
+        if (k === 'w' || k === 'arrowup') {
+          if (menuRow > 0) { menuRow--; changed = true; }
+        } else if (k === 's' || k === 'arrowdown') {
+          if (menuRow < 3) { menuRow++; changed = true; }
+        } else if (k === 'a' || k === 'arrowleft') {
+          if (menuRow === 0) { sliderMaster.value = Math.max(0, parseInt(sliderMaster.value) - 5); sliderMaster.dispatchEvent(new Event('input')); }
+          else if (menuRow === 1) { sliderMusic.value = Math.max(0, parseInt(sliderMusic.value) - 5); sliderMusic.dispatchEvent(new Event('input')); }
+          else if (menuRow === 2) { sliderSFX.value = Math.max(0, parseInt(sliderSFX.value) - 5); sliderSFX.dispatchEvent(new Event('input')); }
+        } else if (k === 'd' || k === 'arrowright') {
+          if (menuRow === 0) { sliderMaster.value = Math.min(100, parseInt(sliderMaster.value) + 5); sliderMaster.dispatchEvent(new Event('input')); }
+          else if (menuRow === 1) { sliderMusic.value = Math.min(100, parseInt(sliderMusic.value) + 5); sliderMusic.dispatchEvent(new Event('input')); }
+          else if (menuRow === 2) { sliderSFX.value = Math.min(100, parseInt(sliderSFX.value) + 5); sliderSFX.dispatchEvent(new Event('input')); }
+        } else if (k === ' ' || k === 'enter') {
+          if (menuRow === 3) {
             audioSystem.init();
             audioSystem.playShieldHit();
+            setMenuScreen('main');
           }
-        } else if (menuRow === 2) {
-          audioSystem.init();
-          startScreen.classList.add('hidden');
-          game.start(selectedShip, selectedStage);
         }
       }
-
+ 
       if (changed) {
         updateMenuFocus();
         audioSystem.init();
@@ -316,7 +443,7 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    // 2. Normal Gameplay Keys
+    // 3. Normal Gameplay Keys
     if (e.key === ' ') {
       e.preventDefault();
     }
@@ -344,46 +471,19 @@ document.addEventListener('DOMContentLoaded', () => {
   // Disable context menu on canvas for smooth right clicks
   canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 
-  // UI Selection Handles - Ships
-  const shipCards = document.querySelectorAll('.ship-card');
-  shipCards.forEach((card, idx) => {
-    card.addEventListener('click', () => {
-      shipCards.forEach(c => c.classList.remove('active'));
-      card.classList.add('active');
-      selectedShip = card.dataset.ship;
-      // Sync keyboard focus index
-      menuRow = 0;
-      menuCol = idx;
-      updateMenuFocus();
-      audioSystem.init();
-      audioSystem.playLaser();
-    });
-  });
-
-  // UI Selection Handles - Stages
-  const stageCards = document.querySelectorAll('.stage-card');
-  stageCards.forEach((card, idx) => {
-    card.addEventListener('click', () => {
-      stageCards.forEach(c => c.classList.remove('active'));
-      card.classList.add('active');
-      selectedStage = parseInt(card.dataset.stage);
-      // Sync keyboard focus index
-      menuRow = 1;
-      menuCol = idx;
-      updateMenuFocus();
-      audioSystem.init();
-      audioSystem.playShieldHit();
-    });
-  });
-
-  // Button Hooks
-  const btnStart = document.getElementById('btnStart');
-  const startScreen = document.getElementById('startScreen');
+  // Mouse Click Event Bindings
+  if (btnGoToShipSelect) btnGoToShipSelect.addEventListener('click', () => setMenuScreen('shipselect'));
+  if (btnGoToOptions) btnGoToOptions.addEventListener('click', () => setMenuScreen('options'));
+  if (btnOptionsBack) btnOptionsBack.addEventListener('click', () => setMenuScreen('main'));
+  if (btnBackToMenu) btnBackToMenu.addEventListener('click', () => setMenuScreen('main'));
   
-  btnStart.addEventListener('click', () => {
+  if (btnPrevShip) btnPrevShip.addEventListener('click', () => rotateShip('left'));
+  if (btnNextShip) btnNextShip.addEventListener('click', () => rotateShip('right'));
+  
+  if (btnLaunchShip) btnLaunchShip.addEventListener('click', () => {
     audioSystem.init();
     startScreen.classList.add('hidden');
-    game.start(selectedShip, selectedStage);
+    game.start(selectedShip, 1); // Start Stage 1 directly
   });
 
   const btnRetry = document.getElementById('btnRetry');
@@ -392,7 +492,7 @@ document.addEventListener('DOMContentLoaded', () => {
   btnRetry.addEventListener('click', () => {
     audioSystem.init();
     gameOverScreen.classList.add('hidden');
-    game.start(selectedShip, selectedStage);
+    game.start(selectedShip, 1); // Start Stage 1 on retry
   });
 
   const btnResume = document.getElementById('btnResume');

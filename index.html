@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>NEON STRIKER: VOID SHIFT - Pixel Bullet Hell</title>
+  <title>VOID SHIFT - Pixel Bullet Hell</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Press+Start+2P&display=swap" rel="stylesheet">
@@ -78,101 +78,99 @@
 
       <!-- Start Screen Menu -->
       <div id="startScreen" class="menu-container">
-        <h1 class="game-title neon-pulse">NEON STRIKER</h1>
-        <h2 class="game-subtitle neon-text-pink">VOID SHIFT</h2>
         
-        <p class="flavor-text">SELECT YOUR STARSHIP COGNITION</p>
-
-        <!-- Ship Selection Row -->
-        <div class="ship-select-row">
-          <div class="ship-card active" data-ship="vanguard">
-            <div class="ship-pixel-preview" id="vanguardPreview"></div>
-            <h3 class="ship-name font-retro">VANGUARD</h3>
-            <p class="ship-class font-scifi">STRIKER CLASS</p>
-            <div class="ship-stat-bar"><div class="stat-fill" style="width: 80%"></div><span class="stat-lbl">SPD</span></div>
-            <div class="ship-stat-bar"><div class="stat-fill" style="width: 90%"></div><span class="stat-lbl">ATK</span></div>
-            <div class="ship-stat-bar"><div class="stat-fill" style="width: 40%"></div><span class="stat-lbl">DEF</span></div>
-            <p class="ship-desc">High velocity, front-firing tactical plasma beam.</p>
-          </div>
-
-          <div class="ship-card" data-ship="aegis">
-            <div class="ship-pixel-preview" id="aegisPreview"></div>
-            <h3 class="ship-name font-retro">AEGIS</h3>
-            <p class="ship-class font-scifi">BULWARK CLASS</p>
-            <div class="ship-stat-bar"><div class="stat-fill" style="width: 40%"></div><span class="stat-lbl">SPD</span></div>
-            <div class="ship-stat-bar"><div class="stat-fill" style="width: 50%"></div><span class="stat-lbl">ATK</span></div>
-            <div class="ship-stat-bar"><div class="stat-fill" style="width: 100%"></div><span class="stat-lbl">DEF</span></div>
-            <p class="ship-desc">Heavy armor. Generates an orbital energy shield that defuses bullets.</p>
-          </div>
-
-          <div class="ship-card" data-ship="sentinel">
-            <div class="ship-pixel-preview" id="sentinelPreview"></div>
-            <h3 class="ship-name font-retro">SENTINEL</h3>
-            <p class="ship-class font-scifi">QUANTUM CLASS</p>
-            <div class="ship-stat-bar"><div class="stat-fill" style="width: 90%"></div><span class="stat-lbl">SPD</span></div>
-            <div class="ship-stat-bar"><div class="stat-fill" style="width: 60%"></div><span class="stat-lbl">ATK</span></div>
-            <div class="ship-stat-bar"><div class="stat-fill" style="width: 60%"></div><span class="stat-lbl">DEF</span></div>
-            <p class="ship-desc">Agile fighter. Commands autonomous auto-targeting lightning sub-drones.</p>
-          </div>
-        </div>
-
-        <p class="flavor-text" style="margin-top: 15px; margin-bottom: 15px;">SELECT COGNITIVE ZONE</p>
-        <div class="stage-select-row">
-          <div class="stage-card active" data-stage="1">
-            <h3 class="stage-name font-retro">NEON SKY-LINE</h3>
-            <p class="stage-class font-scifi">ZONE 1</p>
-            <p class="stage-desc">Futuristic neon skyscrapers, flying hovercar skyways, and patrol drone squads.</p>
-          </div>
-
-          <div class="stage-card" data-stage="2">
-            <h3 class="stage-name font-retro">BIO-CANOPY</h3>
-            <p class="stage-class font-scifi">ZONE 2</p>
-            <p class="stage-desc">Mystical emerald forest, glowing spores, and bio-organic moss drones.</p>
-          </div>
-
-          <div class="stage-card" data-stage="3">
-            <h3 class="stage-name font-retro">VOID COLOSSUS</h3>
-            <p class="stage-class font-scifi">ZONE 3</p>
-            <p class="stage-desc">Mechanical moving space fortress, deep space planetoids, and armored sphere armadas.</p>
-          </div>
-        </div>
-
-        <!-- Neon Audio Control Station -->
-        <div class="audio-control-panel">
-          <div class="audio-status-container">
-            <span class="font-scifi" style="font-size: 11px; color: rgba(255,255,255,0.5); letter-spacing: 2px;">COGNITIVE AUDIO INTERFACE:</span>
-            <span id="audioStatusText" class="font-retro text-glow-red" style="font-size: 10px; margin: 0 15px;">[ OFFLINE 🔇 ]</span>
-            <button id="btnForceAudio" class="btn-audio-force font-retro">ENGAGE SYNTHS 🔊</button>
-          </div>
+        <!-- ==================== MAIN MENU STATE ==================== -->
+        <div id="mainMenuSub" class="menu-sub-state" style="width: 100%; display: flex; flex-direction: column; align-items: center;">
+          <h1 class="game-title neon-pulse" style="font-size: 58px; letter-spacing: 6px; margin-top: 20px; margin-bottom: 45px;">VOID SHIFT</h1>
+          <button id="btnGoToShipSelect" class="btn btn-primary font-retro" style="margin-bottom: 25px; width: 320px;">LAUNCH MISSION</button>
+          <button id="btnGoToOptions" class="btn btn-secondary font-retro" style="width: 320px;">OPTIONS</button>
           
-          <div class="sliders-row">
-            <div class="slider-group">
-              <label for="sliderMaster" class="font-retro">MASTER</label>
-              <input type="range" id="sliderMaster" min="0" max="100" value="80">
-              <span id="valMaster" class="slider-val font-scifi">80%</span>
+          <div class="controls-guide font-scifi" style="margin-top: 45px;">
+            <span>[WASD / ARROWS] Move</span> | 
+            <span>[SPACE / CLICK] Fire</span> | 
+            <span>[SHIFT / B] Void Bomb</span>
+          </div>
+        </div>
+
+        <!-- ==================== SHIP SELECT STATE ==================== -->
+        <div id="shipSelectSub" class="menu-sub-state hidden" style="width: 100%; display: flex; flex-direction: column; align-items: center; position: relative; height: 100%;">
+          <h2 class="font-retro neon-text-pink" style="font-size: 16px; letter-spacing: 3px; margin-top: 15px; margin-bottom: 0;">COGNITIVE SHIP SELECT</h2>
+          
+          <!-- Large Left/Right Selector Buttons overlaying the hangar -->
+          <div class="ship-rotator-container">
+            <button id="btnPrevShip" class="btn-rotator font-retro">&lt;</button>
+            <div style="flex: 1; min-width: 250px; height: 1px;"></div> <!-- Space for the upscaled gantry starship in the background -->
+            <button id="btnNextShip" class="btn-rotator font-retro">&gt;</button>
+          </div>
+
+          <!-- Bottom Bezel Ship Details Panel -->
+          <div class="ship-details-panel">
+            <div class="details-header">
+              <h3 id="detailsName" class="font-retro details-name">VANGUARD</h3>
+              <span id="detailsClass" class="font-scifi details-class">STRIKER CLASS</span>
             </div>
             
-            <div class="slider-group">
-              <label for="sliderMusic" class="font-retro">MUSIC</label>
-              <input type="range" id="sliderMusic" min="0" max="100" value="65">
-              <span id="valMusic" class="slider-val font-scifi">65%</span>
-            </div>
+            <p id="detailsDesc" class="details-desc">High velocity, front-firing tactical plasma beam.</p>
             
-            <div class="slider-group">
-              <label for="sliderSFX" class="font-retro">SFX</label>
-              <input type="range" id="sliderSFX" min="0" max="100" value="75">
-              <span id="valSFX" class="slider-val font-scifi">75%</span>
+            <div class="details-stats-row">
+              <div class="detail-stat">
+                <span class="stat-lbl font-retro">SPD</span>
+                <div class="stat-bar"><div id="barSPD" class="stat-fill" style="width: 80%"></div></div>
+              </div>
+              <div class="detail-stat">
+                <span class="stat-lbl font-retro">ATK</span>
+                <div class="stat-bar"><div id="barATK" class="stat-fill" style="width: 90%"></div></div>
+              </div>
+              <div class="detail-stat">
+                <span class="stat-lbl font-retro">DEF</span>
+                <div class="stat-bar"><div id="barDEF" class="stat-fill" style="width: 40%"></div></div>
+              </div>
+            </div>
+
+            <div class="details-actions">
+              <button id="btnBackToMenu" class="btn btn-secondary font-retro" style="padding: 10px 20px; font-size: 9px;">BACK</button>
+              <button id="btnLaunchShip" class="btn btn-primary font-retro" style="padding: 10px 30px; font-size: 11px;">LAUNCH STARSHIP</button>
             </div>
           </div>
         </div>
 
-        <button id="btnStart" class="btn btn-primary font-retro" style="margin-top: 5px;">LAUNCH MISSION</button>
+        <!-- ==================== OPTIONS STATE ==================== -->
+        <div id="optionsSub" class="menu-sub-state hidden" style="width: 100%; display: flex; flex-direction: column; align-items: center;">
+          <h2 class="font-retro text-glow-blue" style="font-size: 20px; letter-spacing: 4px; margin-top: 15px; margin-bottom: 25px;">OPTIONS</h2>
+          <p class="flavor-text" style="margin-bottom: 15px;">COGNITIVE AUDIO CONFIGURATION</p>
 
-        <div class="controls-guide font-scifi">
-          <span>[WASD / ARROWS] Move</span> | 
-          <span>[SPACE / CLICK] Fire</span> | 
-          <span>[SHIFT / B] Void Bomb</span>
+          <!-- Neon Audio Control Station -->
+          <div class="audio-control-panel" style="margin-bottom: 30px; pointer-events: auto; width: 100%; max-width: 600px;">
+            <div class="audio-status-container">
+              <span class="font-scifi" style="font-size: 10px; color: rgba(255,255,255,0.5); letter-spacing: 2px;">COGNITIVE AUDIO INTERFACE:</span>
+              <span id="audioStatusText" class="font-retro text-glow-red" style="font-size: 9px; margin: 0 12px;">[ OFFLINE 🔇 ]</span>
+              <button id="btnForceAudio" class="btn-audio-force font-retro" style="font-size: 7px; padding: 4px 8px;">ENGAGE SYNTHS 🔊</button>
+            </div>
+            
+            <div class="sliders-row" style="flex-direction: column; gap: 15px; width: 100%;">
+              <div class="slider-group" style="justify-content: space-between; display: flex; align-items: center;">
+                <label for="sliderMaster" class="font-retro" style="font-size: 8px; width: 80px; text-align: left;">MASTER</label>
+                <input type="range" id="sliderMaster" min="0" max="100" value="80" style="flex: 1; margin: 0 15px;">
+                <span id="valMaster" class="slider-val font-scifi" style="width: 40px; text-align: right; font-size: 10px;">80%</span>
+              </div>
+              
+              <div class="slider-group" style="justify-content: space-between; display: flex; align-items: center;">
+                <label for="sliderMusic" class="font-retro" style="font-size: 8px; width: 80px; text-align: left;">MUSIC</label>
+                <input type="range" id="sliderMusic" min="0" max="100" value="65" style="flex: 1; margin: 0 15px;">
+                <span id="valMusic" class="slider-val font-scifi" style="width: 40px; text-align: right; font-size: 10px;">65%</span>
+              </div>
+              
+              <div class="slider-group" style="justify-content: space-between; display: flex; align-items: center;">
+                <label for="sliderSFX" class="font-retro" style="font-size: 8px; width: 80px; text-align: left;">SFX</label>
+                <input type="range" id="sliderSFX" min="0" max="100" value="75" style="flex: 1; margin: 0 15px;">
+                <span id="valSFX" class="slider-val font-scifi" style="width: 40px; text-align: right; font-size: 10px;">75%</span>
+              </div>
+            </div>
+          </div>
+
+          <button id="btnOptionsBack" class="btn btn-secondary font-retro" style="width: 250px;">BACK TO MENU</button>
         </div>
+
       </div>
 
       <!-- Level Up Screen Overlay -->
