@@ -76,8 +76,7 @@ export class Game {
     this.isTransitioningStage = false;
     this.transitionEndTime = 0;
 
-    this.bgScrollFar = 0;
-    this.bgScrollNear = 0;
+    this.bgScroll = 0;
 
     this.wave = 1;
     this.waveInProgress = false;
@@ -676,17 +675,22 @@ export class Game {
   }
 
   drawScrollingLayer(ctx, img, speed, scrollVarName) {
-    this[scrollVarName] = (this[scrollVarName] + speed) % this.canvas.height;
+    // 1. Calculate proportional height to preserve 1:1 pixel art aspect ratio
+    const scale = this.canvas.width / img.width;
+    const drawHeight = img.height * scale;
     
-    // Draw first copy (standard)
-    ctx.drawImage(img, 0, this[scrollVarName] - this.canvas.height, this.canvas.width, this.canvas.height);
+    // 2. Safely initialize and increment the scroll variable, wrapping at drawHeight
+    if (this[scrollVarName] === undefined) {
+      this[scrollVarName] = 0;
+    }
+    this[scrollVarName] = (this[scrollVarName] + speed) % drawHeight;
     
-    // Draw second copy (flipped vertically to mathematically eliminate seams!)
-    ctx.save();
-    ctx.translate(0, this[scrollVarName]);
-    ctx.scale(1, -1);
-    ctx.drawImage(img, 0, -this.canvas.height, this.canvas.width, this.canvas.height);
-    ctx.restore();
+    // 3. Render two seamless, completely upright copies (eliminates flipping & save/restore overhead)
+    // Copy 1: Upper tile (drawn partially offscreen, moving into view)
+    ctx.drawImage(img, 0, this[scrollVarName] - drawHeight, this.canvas.width, drawHeight);
+    
+    // Copy 2: Lower tile (meeting Copy 1 exactly at the scroll offset)
+    ctx.drawImage(img, 0, this[scrollVarName], this.canvas.width, drawHeight);
   }
 
   drawBackground(ctx) {
@@ -696,16 +700,12 @@ export class Game {
     ctx.fillStyle = '#07070d';
     ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
-    const farImg = spriteLoader.get(`bg${this.stage}_far`);
-    const nearImg = spriteLoader.get(`bg${this.stage}_near`);
+    const bgImg = spriteLoader.get(`bg${this.stage}`);
 
-    if (farImg && nearImg) {
-      // 16-Bit Parallax Scrolling Upgrade
-      const farSpeed = this.stage === 1 ? 0.4 : (this.stage === 2 ? 0.3 : 0.5);
-      const nearSpeed = this.stage === 1 ? 1.6 : (this.stage === 2 ? 1.2 : 2.0);
-      
-      this.drawScrollingLayer(ctx, farImg, farSpeed, 'bgScrollFar');
-      this.drawScrollingLayer(ctx, nearImg, nearSpeed, 'bgScrollNear');
+    if (bgImg) {
+      // Draw single, unified vertical background map asset scrolling upright
+      const bgSpeed = this.stage === 1 ? 1.2 : (this.stage === 2 ? 1.0 : 1.5);
+      this.drawScrollingLayer(ctx, bgImg, bgSpeed, 'bgScroll');
       return;
     }
 

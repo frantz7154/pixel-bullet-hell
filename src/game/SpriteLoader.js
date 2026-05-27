@@ -6,7 +6,7 @@ class SpriteLoader {
   constructor() {
     this.sprites = {};
     this.loadedCount = 0;
-    this.totalCount = 15; // 3 player ships + 3 boss ships + 3 enemy sheets + 6 background layers
+    this.totalCount = 18; // 3 player ships + 3 boss ships + 9 individual enemy files + 3 vertical background maps
     this.isReady = false;
     this.onProgressCallback = null;
     this.onCompleteCallback = null;
@@ -33,19 +33,22 @@ class SpriteLoader {
       boss1: '/assets/boss1.png',
       boss2: '/assets/boss2.png',
       boss3: '/assets/boss3.png',
-      // Enemy Sheets (containing Drone, Spinner, Sniper in a horizontal row)
-      enemies_city: '/assets/city_enemies.png',
-      enemies_forest: '/assets/forest_enemies.png',
-      enemies_fortress: '/assets/fortress_enemies.png',
-      // Background layers (Stage 1)
-      bg1_far: '/assets/bg1_far.png',
-      bg1_near: '/assets/bg1_near.png',
-      // Background layers (Stage 2)
-      bg2_far: '/assets/bg2_far.png',
-      bg2_near: '/assets/bg2_near.png',
-      // Background layers (Stage 3)
-      bg3_far: '/assets/bg3_far.png',
-      bg3_near: '/assets/bg3_near.png'
+      // Stage 1 Enemy Files
+      drone_city: '/assets/drone_city.png',
+      spinner_city: '/assets/spinner_city.png',
+      sniper_city: '/assets/sniper_city.png',
+      // Stage 2 Enemy Files
+      drone_forest: '/assets/drone_forest.png',
+      spinner_forest: '/assets/spinner_forest.png',
+      sniper_forest: '/assets/sniper_forest.png',
+      // Stage 3 Enemy Files
+      drone_fortress: '/assets/drone_fortress.png',
+      spinner_fortress: '/assets/spinner_fortress.png',
+      sniper_fortress: '/assets/sniper_fortress.png',
+      // Backgrounds
+      bg1: '/assets/bg1.png',
+      bg2: '/assets/bg2.png',
+      bg3: '/assets/bg3.png'
     };
 
     const keys = Object.keys(rawAssets);
@@ -56,13 +59,8 @@ class SpriteLoader {
         // Chroma key the image (turn solid black transparent)
         const transparentCanvas = this.chromaKey(img);
         
-        // Handle enemy sheet slicing
-        if (key.startsWith('enemies_')) {
-          this.sliceEnemySheet(key, transparentCanvas);
-        } else {
-          // Store directly as canvas
-          this.sprites[key] = transparentCanvas;
-        }
+        // Store directly as canvas
+        this.sprites[key] = transparentCanvas;
 
         this.loadedCount++;
         
@@ -73,7 +71,7 @@ class SpriteLoader {
 
         if (this.loadedCount >= this.totalCount) {
           this.isReady = true;
-          console.log("SpriteLoader: All 15 assets loaded, color-keyed, and cached successfully!");
+          console.log("SpriteLoader: All 18 assets loaded, color-keyed, and cached successfully!");
           if (this.onCompleteCallback) this.onCompleteCallback();
         }
       };
@@ -152,35 +150,6 @@ class SpriteLoader {
     }
 
     return canvas;
-  }
-
-  /**
-   * Slices a 3-enemy horizontal row sheet into separate Drone, Spinner, and Sniper canvases.
-   */
-  sliceEnemySheet(sheetKey, transparentCanvas) {
-    const stageName = sheetKey.replace('enemies_', ''); // 'city', 'forest', 'fortress'
-    const spriteWidth = Math.floor(transparentCanvas.width / 3);
-    const spriteHeight = transparentCanvas.height;
-
-    const types = ['drone', 'spinner', 'sniper'];
-
-    types.forEach((type, idx) => {
-      const sliceCanvas = document.createElement('canvas');
-      sliceCanvas.width = spriteWidth;
-      sliceCanvas.height = spriteHeight;
-      const sliceCtx = sliceCanvas.getContext('2d');
-
-      // Crop the 1/3 horizontal section of the sheet
-      sliceCtx.drawImage(
-        transparentCanvas,
-        idx * spriteWidth, 0, spriteWidth, spriteHeight, // source slice coordinates
-        0, 0, spriteWidth, spriteHeight                  // destination draw coordinates
-      );
-
-      // Cache as 'drone_city', 'spinner_city', etc.
-      const cacheKey = `${type}_${stageName}`;
-      this.sprites[cacheKey] = sliceCanvas;
-    });
   }
 
   /**

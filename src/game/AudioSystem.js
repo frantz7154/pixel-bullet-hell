@@ -259,71 +259,44 @@ class AudioSystem {
      SOUND EFFECTS (SFX) SYNTHESIZERS
      ========================================================================== */
   
-  playLaser() {
+  createSimpleSfx(type, freqStart, freqEnd, duration, gainStart, decayType = 'exponential') {
     if (!this.unlocked) return;
     this.resume();
     
     const now = this.ctx.currentTime;
     const osc = this.ctx.createOscillator();
-    const gain = this.ctx.createGain();
+    const gainNode = this.ctx.createGain();
     
-    osc.type = 'triangle';
-    osc.frequency.setValueAtTime(900, now);
-    // Fast frequency pitch sweep downward
-    osc.frequency.exponentialRampToValueAtTime(120, now + 0.12);
+    osc.type = type;
+    osc.frequency.setValueAtTime(freqStart, now);
+    if (freqEnd !== freqStart) {
+      if (decayType === 'exponential') {
+        osc.frequency.exponentialRampToValueAtTime(freqEnd, now + duration);
+      } else {
+        osc.frequency.linearRampToValueAtTime(freqEnd, now + duration);
+      }
+    }
     
-    gain.gain.setValueAtTime(0.4, now);
-    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.12);
+    gainNode.gain.setValueAtTime(gainStart, now);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, now + duration);
     
-    osc.connect(gain);
-    gain.connect(this.sfxVolume);
+    osc.connect(gainNode);
+    gainNode.connect(this.sfxVolume);
     
     osc.start(now);
-    osc.stop(now + 0.13);
+    osc.stop(now + duration + 0.01);
+  }
+
+  playLaser() {
+    this.createSimpleSfx('triangle', 900, 120, 0.12, 0.4);
   }
 
   playLaserHeavy() {
-    if (!this.unlocked) return;
-    this.resume();
-    
-    const now = this.ctx.currentTime;
-    const osc = this.ctx.createOscillator();
-    const gain = this.ctx.createGain();
-    
-    osc.type = 'sawtooth';
-    osc.frequency.setValueAtTime(450, now);
-    osc.frequency.exponentialRampToValueAtTime(80, now + 0.22);
-    
-    gain.gain.setValueAtTime(0.5, now);
-    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.22);
-    
-    osc.connect(gain);
-    gain.connect(this.sfxVolume);
-    
-    osc.start(now);
-    osc.stop(now + 0.23);
+    this.createSimpleSfx('sawtooth', 450, 80, 0.22, 0.5);
   }
 
   playLaserEnemy() {
-    if (!this.unlocked) return;
-    this.resume();
-    
-    const now = this.ctx.currentTime;
-    const osc = this.ctx.createOscillator();
-    const gain = this.ctx.createGain();
-    
-    osc.type = 'sawtooth';
-    osc.frequency.setValueAtTime(300, now);
-    osc.frequency.exponentialRampToValueAtTime(60, now + 0.18);
-    
-    gain.gain.setValueAtTime(0.2, now);
-    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.18);
-    
-    osc.connect(gain);
-    gain.connect(this.sfxVolume);
-    
-    osc.start(now);
-    osc.stop(now + 0.19);
+    this.createSimpleSfx('sawtooth', 300, 60, 0.18, 0.2);
   }
 
   playExplosion() {
@@ -364,47 +337,11 @@ class AudioSystem {
   }
 
   playHit() {
-    if (!this.unlocked) return;
-    this.resume();
-    
-    const now = this.ctx.currentTime;
-    const osc = this.ctx.createOscillator();
-    const gain = this.ctx.createGain();
-    
-    osc.type = 'sawtooth';
-    osc.frequency.setValueAtTime(180, now);
-    osc.frequency.linearRampToValueAtTime(40, now + 0.15);
-    
-    gain.gain.setValueAtTime(0.4, now);
-    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
-    
-    osc.connect(gain);
-    gain.connect(this.sfxVolume);
-    
-    osc.start(now);
-    osc.stop(now + 0.16);
+    this.createSimpleSfx('sawtooth', 180, 40, 0.15, 0.4, 'linear');
   }
 
   playShieldHit() {
-    if (!this.unlocked) return;
-    this.resume();
-    
-    const now = this.ctx.currentTime;
-    const osc = this.ctx.createOscillator();
-    const gain = this.ctx.createGain();
-    
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(1200, now);
-    osc.frequency.exponentialRampToValueAtTime(600, now + 0.1);
-    
-    gain.gain.setValueAtTime(0.3, now);
-    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
-    
-    osc.connect(gain);
-    gain.connect(this.sfxVolume);
-    
-    osc.start(now);
-    osc.stop(now + 0.11);
+    this.createSimpleSfx('sine', 1200, 600, 0.1, 0.3);
   }
 
   playBomb() {
@@ -502,19 +439,8 @@ class AudioSystem {
   }
 
   getActiveCustomTrack() {
-    let key = 'stage1';
-    if (this.isBossTheme) {
-      key = 'boss';
-    } else if (this.stageTheme === 0) {
-      key = 'menu';
-    } else if (this.stageTheme === 1) {
-      key = 'stage1';
-    } else if (this.stageTheme === 2) {
-      key = 'stage2';
-    } else if (this.stageTheme === 3) {
-      key = 'stage3';
-    }
-    return this.customTracks[key];
+    const key = this.isBossTheme ? 'boss' : (this.stageTheme === 0 ? 'menu' : `stage${this.stageTheme}`);
+    return this.customTracks[key] || this.customTracks.stage1;
   }
 
   startMusic() {

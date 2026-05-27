@@ -107,6 +107,7 @@ export class Player {
     this.hasDoubleShot = false;
     this.hasRearShot = false;
     this.hasHomingMissile = false;
+    this.homingLevel = 0;
     this.hasAutoAim = false;
     this.bulletPierce = 1;
     this.orbitShieldCount = 0;
@@ -188,10 +189,11 @@ export class Player {
     this.y += this.vy;
     
     // Bound clamps
-    if (this.x < this.radius) { this.x = this.radius; this.vx = 0; }
-    if (this.x > canvasWidth - this.radius) { this.x = canvasWidth - this.radius; this.vx = 0; }
-    if (this.y < this.radius) { this.y = this.radius; this.vy = 0; }
-    if (this.y > canvasHeight - this.radius) { this.y = canvasHeight - this.radius; this.vy = 0; }
+    const prevX = this.x, prevY = this.y;
+    this.x = Math.max(this.radius, Math.min(canvasWidth - this.radius, this.x));
+    this.y = Math.max(this.radius, Math.min(canvasHeight - this.radius, this.y));
+    if (this.x !== prevX) this.vx = 0;
+    if (this.y !== prevY) this.vy = 0;
     
     // 2. Point ship upwards (vertical shooter style) with visual banking on movement keys
     if (this.hasAutoAim) {
@@ -451,6 +453,23 @@ export class Player {
   }
 
   /**
+   * Helper to draw the procedural spaceship matrix
+   */
+  drawProceduralShip(ctx, colorTheme = this.colorTheme, colorAccent = this.colorAccent, forceSingleColor = false) {
+    const matrix = SHIP_SPRITES[this.shipType] || SHIP_SPRITES.vanguard;
+    const pixelSize = 4;
+    const halfSize = 16; // (8 * 4) / 2
+    for (let r = 0; r < 8; r++) {
+      for (let c = 0; c < 8; c++) {
+        const val = matrix[r][c];
+        if (val === 0) continue;
+        ctx.fillStyle = forceSingleColor ? colorTheme : (val === 1 ? colorTheme : (val === 2 ? colorAccent : '#ffffff'));
+        ctx.fillRect(c * pixelSize - halfSize, r * pixelSize - halfSize, pixelSize, pixelSize);
+      }
+    }
+  }
+
+  /**
    * Draws the beautiful 8x8 procedural pixel spacecraft
    */
   draw(ctx) {
@@ -494,21 +513,10 @@ export class Player {
       ctx.shadowColor = '#ff2d55';
       
       if (shipSprite) {
-        // Draw 16-bit shadow clone sprite (rotate 90 deg clockwise to face UP)
-        ctx.rotate(Math.PI / 2);
-        ctx.drawImage(shipSprite, -26, -26, 52, 52);
+        // Symmetrical top-down shadow clone naturally points UP (no Math.PI / 2 rotation offset needed)
+        ctx.drawImage(shipSprite, -34, -34, 68, 68);
       } else {
-        const matrix = SHIP_SPRITES[this.shipType] || SHIP_SPRITES.vanguard;
-        const pixelSize = 4;
-        const halfSize = (8 * pixelSize) / 2;
-        for (let r = 0; r < 8; r++) {
-          for (let c = 0; c < 8; c++) {
-            const pixelValue = matrix[r][c];
-            if (pixelValue === 0) continue;
-            ctx.fillStyle = '#ff2d55';
-            ctx.fillRect(c * pixelSize - halfSize, r * pixelSize - halfSize, pixelSize, pixelSize);
-          }
-        }
+        this.drawProceduralShip(ctx, '#ff2d55', '#ff2d55', true);
       }
       ctx.restore();
     }
@@ -525,37 +533,10 @@ export class Player {
     ctx.shadowColor = this.colorTheme;
     
     if (shipSprite) {
-      // Draw premium 16-bit pixel art spaceship!
-      // Rotate 90 degrees clockwise because original PNG points to the left
-      ctx.rotate(Math.PI / 2);
-      ctx.drawImage(shipSprite, -26, -26, 52, 52);
+      // Symmetrical top-down ship naturally points UP (no Math.PI / 2 rotation offset needed)
+      ctx.drawImage(shipSprite, -34, -34, 68, 68);
     } else {
-      // Fallback to procedural
-      const matrix = SHIP_SPRITES[this.shipType] || SHIP_SPRITES.vanguard;
-      const pixelSize = 4; // 8x8 sprite rendered at 32x32 size
-      const halfSize = (8 * pixelSize) / 2;
-      
-      for (let r = 0; r < 8; r++) {
-        for (let c = 0; c < 8; c++) {
-          const pixelValue = matrix[r][c];
-          if (pixelValue === 0) continue;
-          
-          if (pixelValue === 1) {
-            ctx.fillStyle = this.colorTheme;
-          } else if (pixelValue === 2) {
-            ctx.fillStyle = this.colorAccent;
-          } else if (pixelValue === 3) {
-            ctx.fillStyle = '#ffffff'; // White windshield
-          }
-          
-          ctx.fillRect(
-            c * pixelSize - halfSize,
-            r * pixelSize - halfSize,
-            pixelSize,
-            pixelSize
-          );
-        }
-      }
+      this.drawProceduralShip(ctx);
     }
     
     ctx.restore();

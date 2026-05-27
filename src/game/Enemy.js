@@ -517,6 +517,21 @@ export class Enemy {
     return 0;
   }
 
+  /**
+   * Helper to draw standard or boss procedural pixel matrices
+   */
+  drawProcedural(ctx, matrix, size, pixelSize) {
+    const halfSize = (size * pixelSize) / 2;
+    for (let r = 0; r < size; r++) {
+      for (let c = 0; c < size; c++) {
+        const val = matrix[r][c];
+        if (val === 0) continue;
+        ctx.fillStyle = val === 1 ? this.colorTheme : (val === 2 ? this.colorAccent : '#ffffff');
+        ctx.fillRect(c * pixelSize - halfSize, r * pixelSize - halfSize, pixelSize, pixelSize);
+      }
+    }
+  }
+
   draw(ctx, player) {
     if (this.isDead) return;
     
@@ -551,26 +566,7 @@ export class Enemy {
         ctx.drawImage(bossSprite, -68, -68, 136, 136);
       } else {
         // Fallback to 16x16 massive boss matrix
-        const pixelSize = 6; // renders boss as massive 96x96 sprite
-        const halfSize = (16 * pixelSize) / 2;
-        
-        for (let r = 0; r < 16; r++) {
-          for (let c = 0; c < 16; c++) {
-            const val = BOSS_SPRITE[r][c];
-            if (val === 0) continue;
-            
-            if (val === 1) ctx.fillStyle = this.colorTheme;
-            else if (val === 2) ctx.fillStyle = this.colorAccent;
-            else if (val === 3) ctx.fillStyle = '#ffffff'; // shield reactor core
-            
-            ctx.fillRect(
-              c * pixelSize - halfSize,
-              r * pixelSize - halfSize,
-              pixelSize,
-              pixelSize
-            );
-          }
-        }
+        this.drawProcedural(ctx, BOSS_SPRITE, 16, 6); // renders boss as massive 96x96 sprite
       }
       
       // Draw dynamic glowing boss shield ring (visual fluff)
@@ -629,35 +625,14 @@ export class Enemy {
       const enemySprite = spriteLoader.get(spriteKey);
       
       if (enemySprite) {
-        // Draw 16-bit standard enemy image centered
-        // Since the original PNG points to the left, rotate it 90 degrees counter-clockwise to point DOWNWARD
-        ctx.rotate(-Math.PI / 2);
-        ctx.drawImage(enemySprite, -22, -22, 44, 44);
+        // Symmetrical top-down standard enemy naturally points DOWN (no -Math.PI / 2 rotation offset needed)
+        ctx.drawImage(enemySprite, -28, -28, 56, 56);
       } else {
         // Fallback to 8x8 standard enemy matrix
         // The procedural matrix faces UP, so we rotate 180 degrees (Math.PI) to face DOWNWARD
         ctx.rotate(Math.PI);
         const matrix = ENEMY_SPRITES[this.type] || ENEMY_SPRITES.drone;
-        const pixelSize = 4;
-        const halfSize = (8 * pixelSize) / 2;
-        
-        for (let r = 0; r < 8; r++) {
-          for (let c = 0; c < 8; c++) {
-            const val = matrix[r][c];
-            if (val === 0) continue;
-            
-            if (val === 1) ctx.fillStyle = this.colorTheme;
-            else if (val === 2) ctx.fillStyle = this.colorAccent;
-            else if (val === 3) ctx.fillStyle = '#ffffff'; // visor red glow
-            
-            ctx.fillRect(
-              c * pixelSize - halfSize,
-              r * pixelSize - halfSize,
-              pixelSize,
-              pixelSize
-            );
-          }
-        }
+        this.drawProcedural(ctx, matrix, 8, 4);
       }
     }
     
@@ -684,13 +659,18 @@ export class XPGem {
   update(player) {
     const dx = player.x - this.x;
     const dy = player.y - this.y;
-    const dist = Math.sqrt(dx * dx + dy * dy);
+    const distSq = dx * dx + dy * dy;
+    const magnetRange = player.magnetRange;
+    const magnetSq = magnetRange * magnetRange;
     
     // Magnetic pull if player close
-    if (dist < player.magnetRange) {
-      const pullForce = (player.magnetRange - dist) / player.magnetRange * 5.0; // accelerates closer
-      this.vx += (dx / dist) * pullForce * 0.6;
-      this.vy += (dy / dist) * pullForce * 0.6;
+    if (distSq < magnetSq) {
+      const dist = Math.sqrt(distSq);
+      if (dist > 0.1) {
+        const pullForce = (magnetRange - dist) / magnetRange * 3.0; // accelerates closer (5.0 * 0.6 = 3.0)
+        this.vx += (dx / dist) * pullForce;
+        this.vy += (dy / dist) * pullForce;
+      }
       
       // Inertia clamping
       this.x += this.vx;
