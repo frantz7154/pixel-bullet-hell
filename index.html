@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NEON STRIKER: VOID SHIFT - Pixel Bullet Hell</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Press+Start+2P&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <!-- CRT Screen Effect Container -->
+  <div class="crt-container">
+    <div class="crt-screen">
+      <!-- Ambient CRT scanline and flicker overlays -->
+      <div class="scanlines"></div>
+      <div class="flicker"></div>
+      <div class="boss-alarm-overlay" id="bossAlarm"></div>
+
+      <!-- Main Game Canvas -->
+      <canvas id="gameCanvas"></canvas>
+
+      <!-- HTML HUD (Layered on top of Canvas) -->
+      <div id="hud" class="hud-container hidden">
+        <!-- Top Row: Stats -->
+        <div class="hud-header">
+          <div class="hud-item font-retro">SCORE: <span id="scoreVal" class="text-glow-green">000000</span></div>
+          <div class="hud-item font-retro">WAVE: <span id="waveVal" class="text-glow-pink">1</span></div>
+          <div class="hud-item font-retro">HI: <span id="highScoreVal" class="text-glow-yellow">000000</span></div>
+        </div>
+
+        <!-- Left Column: Health and Shield -->
+        <div class="hud-left">
+          <div class="status-gauge-wrapper">
+            <span class="gauge-label font-retro">HP</span>
+            <div class="status-gauge border-green">
+              <div id="hpFill" class="gauge-fill bg-green" style="width: 100%"></div>
+            </div>
+            <span id="hpText" class="gauge-text font-scifi">100/100</span>
+          </div>
+
+          <div class="status-gauge-wrapper">
+            <span class="gauge-label font-retro">SHD</span>
+            <div class="status-gauge border-blue">
+              <div id="shieldFill" class="gauge-fill bg-blue" style="width: 100%"></div>
+            </div>
+            <span id="shieldText" class="gauge-text font-scifi">50/50</span>
+          </div>
+        </div>
+
+        <!-- Right Column: Weapon info, Bombs & XP -->
+        <div class="hud-right">
+          <div class="bombs-container">
+            <span class="gauge-label font-retro">BOMBS</span>
+            <div class="bombs-row" id="bombsRow">
+              <!-- Bombs will be rendered as glowing pixel triangles -->
+            </div>
+          </div>
+
+          <div class="status-gauge-wrapper">
+            <span class="gauge-label font-retro">XP</span>
+            <div class="status-gauge border-pink">
+              <div id="xpFill" class="gauge-fill bg-pink" style="width: 0%"></div>
+            </div>
+            <span id="xpText" class="gauge-text font-scifi">LV. 1</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Start Screen Menu -->
+      <div id="startScreen" class="menu-container">
+        <h1 class="game-title neon-pulse">NEON STRIKER</h1>
+        <h2 class="game-subtitle neon-text-pink">VOID SHIFT</h2>
+        
+        <p class="flavor-text">SELECT YOUR STARSHIP COGNITION</p>
+
+        <!-- Ship Selection Row -->
+        <div class="ship-select-row">
+          <div class="ship-card active" data-ship="vanguard">
+            <div class="ship-pixel-preview" id="vanguardPreview"></div>
+            <h3 class="ship-name font-retro">VANGUARD</h3>
+            <p class="ship-class font-scifi">STRIKER CLASS</p>
+            <div class="ship-stat-bar"><div class="stat-fill" style="width: 80%"></div><span class="stat-lbl">SPD</span></div>
+            <div class="ship-stat-bar"><div class="stat-fill" style="width: 90%"></div><span class="stat-lbl">ATK</span></div>
+            <div class="ship-stat-bar"><div class="stat-fill" style="width: 40%"></div><span class="stat-lbl">DEF</span></div>
+            <p class="ship-desc">High velocity, front-firing tactical plasma beam.</p>
+          </div>
+
+          <div class="ship-card" data-ship="aegis">
+            <div class="ship-pixel-preview" id="aegisPreview"></div>
+            <h3 class="ship-name font-retro">AEGIS</h3>
+            <p class="ship-class font-scifi">BULWARK CLASS</p>
+            <div class="ship-stat-bar"><div class="stat-fill" style="width: 40%"></div><span class="stat-lbl">SPD</span></div>
+            <div class="ship-stat-bar"><div class="stat-fill" style="width: 50%"></div><span class="stat-lbl">ATK</span></div>
+            <div class="ship-stat-bar"><div class="stat-fill" style="width: 100%"></div><span class="stat-lbl">DEF</span></div>
+            <p class="ship-desc">Heavy armor. Generates an orbital energy shield that defuses bullets.</p>
+          </div>
+
+          <div class="ship-card" data-ship="sentinel">
+            <div class="ship-pixel-preview" id="sentinelPreview"></div>
+            <h3 class="ship-name font-retro">SENTINEL</h3>
+            <p class="ship-class font-scifi">QUANTUM CLASS</p>
+            <div class="ship-stat-bar"><div class="stat-fill" style="width: 90%"></div><span class="stat-lbl">SPD</span></div>
+            <div class="ship-stat-bar"><div class="stat-fill" style="width: 60%"></div><span class="stat-lbl">ATK</span></div>
+            <div class="ship-stat-bar"><div class="stat-fill" style="width: 60%"></div><span class="stat-lbl">DEF</span></div>
+            <p class="ship-desc">Agile fighter. Commands autonomous auto-targeting lightning sub-drones.</p>
+          </div>
+        </div>
+
+        <p class="flavor-text" style="margin-top: 15px; margin-bottom: 15px;">SELECT COGNITIVE ZONE</p>
+        <div class="stage-select-row">
+          <div class="stage-card active" data-stage="1">
+            <h3 class="stage-name font-retro">NEON SKY-LINE</h3>
+            <p class="stage-class font-scifi">ZONE 1</p>
+            <p class="stage-desc">Futuristic neon skyscrapers, flying hovercar skyways, and patrol drone squads.</p>
+          </div>
+
+          <div class="stage-card" data-stage="2">
+            <h3 class="stage-name font-retro">BIO-CANOPY</h3>
+            <p class="stage-class font-scifi">ZONE 2</p>
+            <p class="stage-desc">Mystical emerald forest, glowing spores, and bio-organic moss drones.</p>
+          </div>
+
+          <div class="stage-card" data-stage="3">
+            <h3 class="stage-name font-retro">VOID COLOSSUS</h3>
+            <p class="stage-class font-scifi">ZONE 3</p>
+            <p class="stage-desc">Mechanical moving space fortress, deep space planetoids, and armored sphere armadas.</p>
+          </div>
+        </div>
+
+        <!-- Neon Audio Control Station -->
+        <div class="audio-control-panel">
+          <div class="audio-status-container">
+            <span class="font-scifi" style="font-size: 11px; color: rgba(255,255,255,0.5); letter-spacing: 2px;">COGNITIVE AUDIO INTERFACE:</span>
+            <span id="audioStatusText" class="font-retro text-glow-red" style="font-size: 10px; margin: 0 15px;">[ OFFLINE 🔇 ]</span>
+            <button id="btnForceAudio" class="btn-audio-force font-retro">ENGAGE SYNTHS 🔊</button>
+          </div>
+          
+          <div class="sliders-row">
+            <div class="slider-group">
+              <label for="sliderMaster" class="font-retro">MASTER</label>
+              <input type="range" id="sliderMaster" min="0" max="100" value="80">
+              <span id="valMaster" class="slider-val font-scifi">80%</span>
+            </div>
+            
+            <div class="slider-group">
+              <label for="sliderMusic" class="font-retro">MUSIC</label>
+              <input type="range" id="sliderMusic" min="0" max="100" value="65">
+              <span id="valMusic" class="slider-val font-scifi">65%</span>
+            </div>
+            
+            <div class="slider-group">
+              <label for="sliderSFX" class="font-retro">SFX</label>
+              <input type="range" id="sliderSFX" min="0" max="100" value="75">
+              <span id="valSFX" class="slider-val font-scifi">75%</span>
+            </div>
+          </div>
+        </div>
+
+        <button id="btnStart" class="btn btn-primary font-retro" style="margin-top: 5px;">LAUNCH MISSION</button>
+
+        <div class="controls-guide font-scifi">
+          <span>[WASD / ARROWS] Move</span> | 
+          <span>[SPACE / CLICK] Fire</span> | 
+          <span>[SHIFT / B] Void Bomb</span>
+        </div>
+      </div>
+
+      <!-- Level Up Screen Overlay -->
+      <div id="levelUpScreen" class="menu-container hidden">
+        <h2 class="modal-title text-glow-pink font-retro pulse-fast">UPGRADE LOADOUT</h2>
+        <p class="modal-subtitle font-scifi text-glow-blue">COGNITIVE LEVEL EXPANDED</p>
+        
+        <div class="upgrade-cards-container" id="upgradeCards">
+          <!-- Dynamically populated card upgrades -->
+        </div>
+      </div>
+
+      <!-- Game Over / Victory Screen -->
+      <div id="gameOverScreen" class="menu-container hidden">
+        <h1 class="modal-title font-retro text-glow-red" id="gameOverTitle">MISSION FAILED</h1>
+        <p class="modal-subtitle font-scifi" id="gameOverSubtitle">COGNITIVE SIGNALS TERMINATED</p>
+
+        <div class="stats-card font-scifi">
+          <div class="stat-row"><span>FINAL SCORE:</span><span id="finalScoreVal" class="text-glow-yellow">000000</span></div>
+          <div class="stat-row"><span>WAVES SURVIVED:</span><span id="finalWaveVal" class="text-glow-pink">0</span></div>
+          <div class="stat-row"><span>ENEMIES CRUSHED:</span><span id="finalEnemiesVal" class="text-glow-green">0</span></div>
+        </div>
+
+        <button id="btnRetry" class="btn btn-secondary font-retro">REBOOT COGNITION</button>
+      </div>
+
+      <!-- Pause Screen -->
+      <div id="pauseScreen" class="menu-container hidden">
+        <h2 class="modal-title font-retro text-glow-blue">PAUSED</h2>
+        <p class="modal-subtitle font-scifi">SYSTEMS ON STANDBY</p>
+
+        <!-- Pause Audio Control Station -->
+        <div class="audio-control-panel pause-audio-panel" style="margin-bottom: 25px; width: 100%; max-width: 600px;">
+          <div class="sliders-row" style="flex-direction: column; gap: 15px; width: 100%;">
+            <div class="slider-group" style="width: 100%; justify-content: space-between;">
+              <label for="sliderMasterPause" class="font-retro" style="font-size: 9px; width: 80px; text-align: left;">MASTER</label>
+              <input type="range" id="sliderMasterPause" min="0" max="100" value="80" style="flex: 1; margin: 0 15px;">
+              <span id="valMasterPause" class="slider-val font-scifi" style="width: 50px; text-align: right;">80%</span>
+            </div>
+            
+            <div class="slider-group" style="width: 100%; justify-content: space-between;">
+              <label for="sliderMusicPause" class="font-retro" style="font-size: 9px; width: 80px; text-align: left;">MUSIC</label>
+              <input type="range" id="sliderMusicPause" min="0" max="100" value="65" style="flex: 1; margin: 0 15px;">
+              <span id="valMusicPause" class="slider-val font-scifi" style="width: 50px; text-align: right;">65%</span>
+            </div>
+            
+            <div class="slider-group" style="width: 100%; justify-content: space-between;">
+              <label for="sliderSFXPause" class="font-retro" style="font-size: 9px; width: 80px; text-align: left;">SFX</label>
+              <input type="range" id="sliderSFXPause" min="0" max="100" value="75" style="flex: 1; margin: 0 15px;">
+              <span id="valSFXPause" class="slider-val font-scifi" style="width: 50px; text-align: right;">75%</span>
+            </div>
+          </div>
+        </div>
+
+        <button id="btnResume" class="btn btn-primary font-retro">RESUME OPERATIONS</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
