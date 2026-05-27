@@ -77,6 +77,8 @@ export class Game {
     this.transitionEndTime = 0;
 
     this.bgScroll = 0;
+    this.stageOverlays = [];
+    this.lastOverlaySpawnTime = 0;
 
     this.wave = 1;
     this.waveInProgress = false;
@@ -685,12 +687,362 @@ export class Game {
     }
     this[scrollVarName] = (this[scrollVarName] + speed) % drawHeight;
     
-    // 3. Render two seamless, completely upright copies (eliminates flipping & save/restore overhead)
-    // Copy 1: Upper tile (drawn partially offscreen, moving into view)
+    // 3. Render Copy 1: Upper tile (drawn partially offscreen, moving into view)
     ctx.drawImage(img, 0, this[scrollVarName] - drawHeight, this.canvas.width, drawHeight);
     
-    // Copy 2: Lower tile (meeting Copy 1 exactly at the scroll offset)
+    // 4. Render Copy 2: Lower tile (meeting Copy 1 exactly at the scroll offset)
     ctx.drawImage(img, 0, this[scrollVarName], this.canvas.width, drawHeight);
+    
+    // 5. Seamless Seam-Blending Overlap Gradient
+    // We draw a small transparent overlay at the seam boundary to smoothly transition color tones!
+    const seamY = this[scrollVarName];
+    if (seamY > 0 && seamY < this.canvas.height) {
+      ctx.save();
+      const blendHeight = 32; // width of blend strip
+      const grad = ctx.createLinearGradient(0, seamY - blendHeight/2, 0, seamY + blendHeight/2);
+      grad.addColorStop(0, 'rgba(7, 7, 13, 0.0)');
+      grad.addColorStop(0.5, 'rgba(7, 7, 13, 0.4)'); // slightly darkens the edge to feather out the repeating line
+      grad.addColorStop(1, 'rgba(7, 7, 13, 0.0)');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, seamY - blendHeight/2, this.canvas.width, blendHeight);
+      ctx.restore();
+    }
+  }
+
+  /**
+   * Updates scrolling positions and renders Evolving Stage Layout Overlays
+   */
+  updateAndDrawStageOverlays(ctx) {
+    if (!this.isPlaying || this.isPaused || this.isTransitioningStage) return;
+    
+    if (!this.stageOverlays) {
+      this.stageOverlays = [];
+      this.lastOverlaySpawnTime = 0;
+    }
+    
+    const time = Date.now();
+    const bgSpeed = this.stage === 1 ? 1.2 : (this.stage === 2 ? 1.0 : 1.5);
+    
+    // Periodically spawn new overlays (every 4 to 7 seconds)
+    const spawnDelay = this.stage === 1 ? 3000 : (this.stage === 2 ? 4000 : 3500);
+    if (time - this.lastOverlaySpawnTime > spawnDelay + Math.random() * 2500) {
+      this.lastOverlaySpawnTime = time;
+      this.spawnStageOverlay();
+    }
+    
+    // Update and draw overlays
+    for (let i = this.stageOverlays.length - 1; i >= 0; i--) {
+      const obj = this.stageOverlays[i];
+      
+      // Update Y (scroll down at background speed)
+      obj.y += bgSpeed;
+      
+      // Draw object
+      ctx.save();
+      ctx.translate(obj.x, obj.y);
+      this.drawProceduralOverlayObject(ctx, obj);
+      ctx.restore();
+      
+      // Delete off-screen
+      if (obj.y > this.canvas.height + 250) {
+        this.stageOverlays.splice(i, 1);
+      }
+    }
+  }
+
+  /**
+   * Spawns a new unique scrolling landscape overlay depending on current active zone
+   */
+  spawnStageOverlay() {
+    const rx = Math.random() * (this.canvas.width - 250) + 120;
+    const ry = -200;
+    
+    if (this.stage === 1) {
+      // Stage 1: Holographic billboards, fast-moving high-altitude highways, pipelines
+      const types = ['billboard', 'highway', 'pipeline'];
+      const type = types[Math.floor(Math.random() * types.length)];
+      
+      let text = 'VOID SHIFT';
+      let color = '#00ffff';
+      const r = Math.random();
+      if (r < 0.25) { text = 'NEON STRIKER'; color = '#ff2d55'; }
+      else if (r < 0.5) { text = 'DRIVE CHARGED'; color = '#fff01f'; }
+      else if (r < 0.75) { text = 'CRIT STABLE'; color = '#39ff14'; }
+      
+      this.stageOverlays.push({
+        type: type,
+        x: type === 'pipeline' ? 0 : rx,
+        y: ry,
+        width: type === 'pipeline' ? this.canvas.width : 130 + Math.random() * 70,
+        height: type === 'pipeline' ? 12 : 54,
+        text: text,
+        color: color,
+        speed: 1.0 + Math.random() * 0.8,
+        cars: Array.from({length: 3}, () => ({
+          pos: Math.random() * 200,
+          color: Math.random() > 0.5 ? '#00ffff' : '#ff2d55',
+          speed: 1.5 + Math.random() * 2.5
+        }))
+      });
+    } else if (this.stage === 2) {
+      // Stage 2: Giant mossy branches, bio-spore clusters, glowing wild mushrooms
+      const types = ['branch_left', 'branch_right', 'mushroom_cluster'];
+      const type = types[Math.floor(Math.random() * types.length)];
+      
+      this.stageOverlays.push({
+        type: type,
+        x: type === 'branch_left' ? 0 : (type === 'branch_right' ? this.canvas.width : rx),
+        y: ry,
+        radius: 30 + Math.random() * 30,
+        length: 130 + Math.random() * 110,
+        color: Math.random() > 0.5 ? '#bd00ff' : '#39ff14'
+      });
+    } else if (this.stage === 3) {
+      // Stage 3: Hangar panels, caution gates, rotating defense radar plates
+      const types = ['catwalk', 'radar', 'caution_strip'];
+      const type = types[Math.floor(Math.random() * types.length)];
+      
+      this.stageOverlays.push({
+        type: type,
+        x: type === 'catwalk' ? 0 : rx,
+        y: ry,
+        width: type === 'catwalk' ? this.canvas.width : 60 + Math.random() * 50,
+        height: type === 'catwalk' ? 16 : 60,
+        angle: Math.random() * Math.PI,
+        rotSpeed: 0.01 + Math.random() * 0.02
+      });
+    }
+  }
+
+  /**
+   * Renders detailed 16-bit retro procedural overlays onto the scrolling map
+   */
+  drawProceduralOverlayObject(ctx, obj) {
+    ctx.shadowBlur = 0; // Reset default blur
+    
+    if (obj.type === 'billboard') {
+      // Neon billboard frame
+      ctx.save();
+      ctx.fillStyle = 'rgba(7, 7, 13, 0.85)';
+      ctx.strokeStyle = '#39ff14'; // glowing green frame
+      ctx.lineWidth = 2.5;
+      ctx.shadowBlur = 12;
+      ctx.shadowColor = '#39ff14';
+      ctx.fillRect(-obj.width/2, -obj.height/2, obj.width, obj.height);
+      ctx.strokeRect(-obj.width/2, -obj.height/2, obj.width, obj.height);
+      
+      // Frame metal struts
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = '#1c1c24';
+      ctx.fillRect(-6, obj.height/2, 12, 40);
+      
+      // Neon text inside billboard
+      ctx.font = '8px "Press Start 2P"';
+      ctx.fillStyle = obj.color;
+      ctx.shadowBlur = 8;
+      ctx.shadowColor = obj.color;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(obj.text, 0, 0);
+      ctx.restore();
+      
+    } else if (obj.type === 'highway') {
+      // High-altitude scrolling highway
+      ctx.save();
+      ctx.fillStyle = 'rgba(28, 28, 36, 0.4)';
+      ctx.strokeStyle = 'rgba(0, 255, 255, 0.1)';
+      ctx.lineWidth = 1;
+      ctx.fillRect(-100, -25, 200, 50);
+      ctx.strokeRect(-100, -25, 200, 50);
+      
+      // Moving hovercar pixel light streaks
+      obj.cars.forEach(car => {
+        car.pos = (car.pos + car.speed) % 200;
+        ctx.fillStyle = car.color;
+        ctx.shadowBlur = 6;
+        ctx.shadowColor = car.color;
+        ctx.fillRect(-100 + car.pos, -15, 6, 3);
+        ctx.fillRect(-100 + ((car.pos + 80) % 200), 10, 6, 3);
+      });
+      ctx.restore();
+      
+    } else if (obj.type === 'pipeline') {
+      // Power conduits grid line
+      ctx.fillStyle = '#111115';
+      ctx.fillRect(0, -6, obj.width, 12);
+      ctx.fillStyle = '#39ff14'; // glowing green power conduits
+      ctx.shadowBlur = 8;
+      ctx.shadowColor = '#39ff14';
+      ctx.fillRect(0, -2, obj.width, 4);
+      
+    } else if (obj.type === 'branch_left') {
+      // Ancient canopy branch from left
+      ctx.fillStyle = '#0f1710';
+      ctx.beginPath();
+      ctx.moveTo(0, -20);
+      ctx.lineTo(obj.length, -6);
+      ctx.lineTo(obj.length, 6);
+      ctx.lineTo(0, 20);
+      ctx.closePath();
+      ctx.fill();
+      
+      // Glowing emerald leaves
+      ctx.fillStyle = obj.color;
+      ctx.shadowBlur = 8;
+      ctx.shadowColor = obj.color;
+      for (let j = 40; j < obj.length; j += 35) {
+        ctx.beginPath();
+        ctx.arc(j, -6, 8, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      
+    } else if (obj.type === 'branch_right') {
+      // Ancient canopy branch from right
+      ctx.fillStyle = '#0f1710';
+      ctx.beginPath();
+      ctx.moveTo(0, -20);
+      ctx.lineTo(-obj.length, -6);
+      ctx.lineTo(-obj.length, 6);
+      ctx.lineTo(0, 20);
+      ctx.closePath();
+      ctx.fill();
+      
+      // Glowing purple spore leaves
+      ctx.fillStyle = obj.color;
+      ctx.shadowBlur = 8;
+      ctx.shadowColor = obj.color;
+      for (let j = 40; j < obj.length; j += 35) {
+        ctx.beginPath();
+        ctx.arc(-j, -6, 8, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      
+    } else if (obj.type === 'mushroom_cluster') {
+      // Glowing wild mushroom patches
+      ctx.save();
+      ctx.fillStyle = obj.color;
+      ctx.shadowBlur = 10;
+      ctx.shadowColor = obj.color;
+      
+      // Caps
+      ctx.beginPath();
+      ctx.arc(0, -10, obj.radius * 0.4, Math.PI, 0);
+      ctx.closePath();
+      ctx.fill();
+      
+      ctx.beginPath();
+      ctx.arc(-15, 0, obj.radius * 0.3, Math.PI, 0);
+      ctx.closePath();
+      ctx.fill();
+      
+      // Stems
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(-2, -10, 4, 12);
+      ctx.fillRect(-17, 0, 3, 10);
+      ctx.restore();
+      
+    } else if (obj.type === 'catwalk') {
+      // Industrial steel girder bridge
+      ctx.fillStyle = '#1c1c24';
+      ctx.fillRect(0, -obj.height/2, obj.width, obj.height);
+      ctx.strokeStyle = '#ffaa00'; // caution orange outline
+      ctx.lineWidth = 2;
+      ctx.strokeRect(0, -obj.height/2, obj.width, obj.height);
+      
+    } else if (obj.type === 'radar') {
+      // Rotating hangar radar plates
+      if (obj.currentAngle === undefined) obj.currentAngle = obj.angle;
+      obj.currentAngle += obj.rotSpeed;
+      
+      ctx.save();
+      ctx.rotate(obj.currentAngle);
+      ctx.fillStyle = '#2d2d3c';
+      ctx.strokeStyle = '#fff01f';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(0, 0, obj.width * 0.4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      
+      // Rotating emitter sweeps
+      ctx.fillStyle = '#fff01f';
+      ctx.shadowBlur = 6;
+      ctx.shadowColor = '#fff01f';
+      ctx.fillRect(0, -2, obj.width * 0.38, 4);
+      ctx.restore();
+      
+    } else if (obj.type === 'caution_strip') {
+      // Caution stripes
+      ctx.fillStyle = '#ffaa00';
+      ctx.fillRect(-obj.width/2, -10, obj.width, 20);
+      
+      ctx.fillStyle = '#000000';
+      for (let j = -obj.width/2; j < obj.width/2; j += 15) {
+        ctx.beginPath();
+        ctx.moveTo(j, -10);
+        ctx.lineTo(j + 8, -10);
+        ctx.lineTo(j - 2, 10);
+        ctx.lineTo(j - 10, 10);
+        ctx.closePath();
+        ctx.fill();
+      }
+    }
+  }
+
+  /**
+   * Draws triple-parallax high-altitude atmospheric clouds and bio-spore overlays
+   */
+  drawAtmosphericOverlays(ctx) {
+    if (!this.isPlaying || this.isPaused) return;
+    
+    if (!this.atmosphereElements) {
+      this.atmosphereElements = [];
+      // Initialize atmosphere layers
+      for (let i = 0; i < 12; i++) {
+        this.atmosphereElements.push({
+          x: Math.random() * this.canvas.width,
+          y: Math.random() * this.canvas.height,
+          speed: 1.6 + Math.random() * 1.4,
+          size: 40 + Math.random() * 60,
+          opacity: 0.05 + Math.random() * 0.08,
+          color: this.stage === 1 ? '#00ffff' : (this.stage === 2 ? '#39ff14' : '#ff5500')
+        });
+      }
+    }
+    
+    ctx.save();
+    this.atmosphereElements.forEach(el => {
+      // Scroll down (faster than level base velocity to create triple parallax depth!)
+      el.y += el.speed;
+      if (el.y > this.canvas.height + el.size) {
+        el.y = -el.size;
+        el.x = Math.random() * this.canvas.width;
+        el.speed = 1.6 + Math.random() * 1.4;
+        el.size = 40 + Math.random() * 60;
+        el.opacity = 0.05 + Math.random() * 0.08;
+        el.color = this.stage === 1 ? '#00ffff' : (this.stage === 2 ? '#39ff14' : '#ff5500');
+      }
+      
+      ctx.fillStyle = el.color;
+      ctx.globalAlpha = el.opacity;
+      ctx.beginPath();
+      
+      if (this.stage === 2) {
+        // Stage 2: Bio-Spores (Glowing circles with soft shadow blur)
+        ctx.shadowBlur = 8;
+        ctx.shadowColor = el.color;
+        ctx.arc(el.x, el.y, el.size * 0.15, 0, Math.PI * 2);
+        ctx.fill();
+      } else {
+        // Stage 1 & 3: Soft cybernetic high-altitude mist clouds
+        ctx.arc(el.x, el.y, el.size * 0.4, 0, Math.PI * 2);
+        ctx.arc(el.x - el.size * 0.25, el.y + el.size * 0.1, el.size * 0.3, 0, Math.PI * 2);
+        ctx.arc(el.x + el.size * 0.25, el.y + el.size * 0.1, el.size * 0.3, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    });
+    ctx.restore();
   }
 
   drawBackground(ctx) {
@@ -878,6 +1230,9 @@ export class Game {
 
     // Render Stage-specific background
     this.drawBackground(this.ctx);
+    
+    // Render and update Evolving Stage Layout Overlays (pipes, billboards, branches, catwalks)
+    this.updateAndDrawStageOverlays(this.ctx);
 
     // Intermission text overlay (HUD overlay handles standard screens, but wave intermissions render crisp in center of canvas)
     if (this.waveIntermission) {
@@ -918,6 +1273,9 @@ export class Game {
     if (this.player) {
       this.player.draw(this.ctx);
     }
+    
+    // Render high-altitude triple-parallax atmospheric overlays (cyber-clouds, bio-spores, exhaust mist)
+    this.drawAtmosphericOverlays(this.ctx);
 
     // Draw stage transition hyperspace overlay text
     if (this.isTransitioningStage) {

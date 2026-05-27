@@ -470,6 +470,68 @@ export class Player {
   }
 
   /**
+   * Draws detailed animated flickering 16-bit retro thruster exhaust flames
+   */
+  drawThrusterFlames(ctx) {
+    const time = Date.now();
+    const flicker = 0.85 + Math.sin(time * 0.08) * 0.15 + Math.random() * 0.08;
+    
+    // Choose nozzle positions and colors depending on ship class
+    let nozzles = [];
+    let colors = { outer: '#ff2d55', middle: '#ff9500', inner: '#ffffff' }; // default
+    
+    if (this.shipType === 'vanguard') {
+      nozzles = [{ x: -10, y: 30, w: 6, h: 20 }, { x: 10, y: 30, w: 6, h: 20 }];
+      colors = { outer: '#00ffff', middle: '#0088ff', inner: '#ffffff' }; // Cyan plasma
+    } else if (this.shipType === 'aegis') {
+      nozzles = [{ x: -16, y: 26, w: 8, h: 18 }, { x: 0, y: 28, w: 10, h: 24 }, { x: 16, y: 26, w: 8, h: 18 }];
+      colors = { outer: '#bd00ff', middle: '#00ffff', inner: '#ffffff' }; // Violet / Cyan crystal shields
+    } else if (this.shipType === 'sentinel') {
+      nozzles = [{ x: -12, y: 32, w: 5, h: 22 }, { x: 12, y: 32, w: 5, h: 22 }];
+      colors = { outer: '#ff2d55', middle: '#fff01f', inner: '#ffffff' }; // Crimson / Yellow kinetic flame
+    } else {
+      nozzles = [{ x: 0, y: 30, w: 8, h: 20 }];
+    }
+    
+    nozzles.forEach(nozzle => {
+      ctx.save();
+      ctx.translate(nozzle.x, nozzle.y);
+      
+      const nw = nozzle.w * flicker;
+      const nh = nozzle.h * flicker;
+      
+      // Outer flame (largest)
+      ctx.fillStyle = colors.outer;
+      ctx.beginPath();
+      ctx.moveTo(-nw, 0);
+      ctx.lineTo(nw, 0);
+      ctx.lineTo(0, nh);
+      ctx.closePath();
+      ctx.fill();
+      
+      // Middle flame
+      ctx.fillStyle = colors.middle;
+      ctx.beginPath();
+      ctx.moveTo(-nw * 0.6, 0);
+      ctx.lineTo(nw * 0.6, 0);
+      ctx.lineTo(0, nh * 0.65);
+      ctx.closePath();
+      ctx.fill();
+      
+      // Inner core (hottest, white)
+      ctx.fillStyle = colors.inner;
+      ctx.beginPath();
+      ctx.moveTo(-nw * 0.3, 0);
+      ctx.lineTo(nw * 0.3, 0);
+      ctx.lineTo(0, nh * 0.35);
+      ctx.closePath();
+      ctx.fill();
+      
+      ctx.restore();
+    });
+  }
+
+  /**
    * Draws the beautiful 8x8 procedural pixel spacecraft
    */
   draw(ctx) {
@@ -512,6 +574,9 @@ export class Player {
       ctx.shadowBlur = 10;
       ctx.shadowColor = '#ff2d55';
       
+      // Draw shadow clone thruster flames
+      this.drawThrusterFlames(ctx);
+      
       if (shipSprite) {
         // Symmetrical top-down shadow clone naturally points UP (no Math.PI / 2 rotation offset needed)
         ctx.drawImage(shipSprite, -34, -34, 68, 68);
@@ -531,6 +596,9 @@ export class Player {
     // Optional glow background
     ctx.shadowBlur = 10;
     ctx.shadowColor = this.colorTheme;
+    
+    // Draw animated main thruster flames!
+    this.drawThrusterFlames(ctx);
     
     if (shipSprite) {
       // Symmetrical top-down ship naturally points UP (no Math.PI / 2 rotation offset needed)

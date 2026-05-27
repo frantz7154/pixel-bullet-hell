@@ -554,8 +554,24 @@ export class Enemy {
     }
     
     ctx.save();
-    ctx.translate(drawX, drawY);
-    ctx.shadowBlur = this.radius * 0.75;
+    
+    // Calculate organic floating hovering and flight stabilization banking wobble
+    const isBoss = this.type.startsWith('boss');
+    const hoverSpeed = isBoss ? 0.003 : 0.005;
+    const hoverAmount = isBoss ? 6 : 4;
+    const wobbleSpeed = isBoss ? 0.004 : 0.007;
+    const wobbleAmount = isBoss ? 0.04 : 0.08;
+    
+    const hoverY = Math.sin(Date.now() * hoverSpeed + this.spawnTime) * hoverAmount;
+    const wobbleAngle = Math.sin(Date.now() * wobbleSpeed + this.spawnTime) * wobbleAmount;
+    
+    ctx.translate(drawX, drawY + hoverY);
+    ctx.rotate(wobbleAngle);
+    
+    // Pulsing glowing cores
+    const pulseAlpha = 0.88 + Math.sin(Date.now() * 0.006 + this.spawnTime) * 0.12;
+    ctx.globalAlpha = pulseAlpha;
+    ctx.shadowBlur = this.radius * (0.8 + Math.sin(Date.now() * 0.006) * 0.4);
     ctx.shadowColor = this.colorTheme;
     
     if (this.type.startsWith('boss')) {
